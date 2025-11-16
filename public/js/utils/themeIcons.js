@@ -1,47 +1,49 @@
 export const themeIcons = {
   'Gritty Sci-Fi': `
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-      <path d="M15 14c.2-.5.5-1 1-1.5a4.2 4.2 0 0 0-4.5-4.5 4.2 4.2 0 0 0-4.5 4.5c.3.5.6 1 1 1.5"/>
-      <path d="M9 18h6"/>
-      <path d="M10 22h4"/>
-      <path d="M12 22v-3"/>
-      <path d="M8 20v-2"/>
-      <path d="M16 20v-2"/>
+      <rect x="5" y="5" width="14" height="14" rx="2" ry="2"/>
+      <path d="M10 9h4"/>
+      <path d="M10 15h4"/>
+      <path d="M10 12h-4"/>
+      <path d="M14 12h4"/>
+      <path d="M12 5v-2"/>
+      <path d="M12 19v2"/>
+      <line x1="17" y1="7" x2="15" y2="9" stroke-dasharray="2 2"/>
     </svg>
   `,
   'High Fantasy': `
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-      <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/>
-      <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>
-      <path d="M10 7h6"/>
-      <path d="M10 12h6"/>
-      <path d="M10 17h6"/>
+      <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/>
+      <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/>
+      <path d="M12 7l-2 2h4l-2 2"/>
     </svg>
   `,
   'Weird West': `
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-      <circle cx="12" cy="12" r="10"/>
-      <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/>
-      <line x1="12" y1="17" x2="12.01" y2="17"/>
+      <path d="M10 12a2 2 0 1 0 4 0a2 2 0 1 0-4 0"/>
+      <path d="M8 12h8"/>
+      <path d="M6 15c2.5 2 4.5 2 6 2s3.5 0 6-2"/>
+      <path d="M2 20s3-3 10-3s10 3 10 3"/>
     </svg>
   `,
   'Cyberpunk Noir': `
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-      <rect x="5" y="5" width="14" height="14" rx="2" ry="2"/>
-      <path d="M10 9h4"/>
-      <path d="M10 15h4"/>
-      <path d="M9 10v4"/>
-      <path d="M15 10v4"/>
-      <rect x="8" y="8" width="8" height="8" rx="1" ry="1"/>
+      <rect x="2" y="10" width="20" height="12"/>
+      <path d="M6 22V15"/>
+      <path d="M10 22V18"/>
+      <path d="M14 22V16"/>
+      <path d="M18 22V19"/>
+      <line x1="5" y1="7" x2="7" y2="4"/>
+      <line x1="17" y1="7" x2="19" y2="4"/>
+      <line x1="11" y1="5" x2="13" y2="2"/>
     </svg>
   `,
   'Cosmic Horror': `
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-      <path d="M12 2v20"/>
-      <path d="M22 12H2"/>
-      <path d="M17.5 6.5l-11 11"/>
-      <path d="M6.5 6.5l11 11"/>
-      <circle cx="12" cy="12" r="3"/>
+      <path d="M12 2c-5.523 0-10 4.477-10 10s4.477 10 10 10 10-4.477 10-10-4.477-10-10-10z"/>
+      <path d="M7 12c0 2.761 2.239 5 5 5s5-2.239 5-5s-2.239-5-5-5s-5 2.239-5 5z" fill="currentColor"/>
+      <circle cx="12" cy="12" r="1" fill="white" stroke="white"/>
+      <path d="M2 12c1-2 4-4 10-4s9 2 10 4M2 12c1 2 4 4 10 4s9-2 10-4"/>
     </svg>
   `
 };
