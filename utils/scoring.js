@@ -1,21 +1,15 @@
 const POINTS = {
-  VOTE_RECEIVED: 10,
-  CONSISTENCY_BONUS: 25,
-  SCRIBE_COMPLETION: 15
+  CHOSEN_BONUS: 50, // Points for having your sentence chosen by scribe
+  SCRIBE_COMPLETION: 15 // Points for completing scribe duties
 };
 
 function calculateScores(votedSubmissions, chosenId, scribeId) {
   const scores = {};
   
-  // Award points for votes received
-  votedSubmissions.forEach(({ submissionId, votes }) => {
-    scores[submissionId] = votes * POINTS.VOTE_RECEIVED;
-    
-    // Consistency bonus for chosen sentence
-    if (submissionId === chosenId) {
-      scores[submissionId] += POINTS.CONSISTENCY_BONUS;
-    }
-  });
+  // Award points to chosen submission winner
+  if (chosenId) {
+    scores[chosenId] = POINTS.CHOSEN_BONUS;
+  }
   
   // Scribe completion bonus
   scores[scribeId] = (scores[scribeId] || 0) + POINTS.SCRIBE_COMPLETION;

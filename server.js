@@ -394,33 +394,10 @@ io.on('connection', (socket) => {
       });
 
       if (gameState.allSubmitted()) {
-        // Move to voting phase
-        const submissions = Array.from(gameState.submissions.values());
-        io.to(roomId).emit('votingPhase', { submissions });
-      }
-    } catch (err) {
-      socket.emit('error', { message: err.message });
-    }
-  });
-
-  // Submit vote
-  socket.on('submitVote', ({ roomId, submissionId }) => {
-    const gameState = gameStates.get(roomId);
-    if (!gameState) return;
-
-    try {
-      gameState.addVote(socket.userId, submissionId);
-      
-      io.to(roomId).emit('voteReceived', {
-        voterId: socket.userId,
-        totalVotes: gameState.votes.size,
-        requiredVotes: gameState.players.length - 1
-      });
-
-      if (gameState.allVoted()) {
-        const topVoted = gameState.calculateTopVoted();
+        // All submissions received - scribe chooses directly
+        const submissions = gameState.getAllSubmissions();
         io.to(roomId).emit('scribeChoice', { 
-          topVoted,
+          submissions,
           scribeId: gameState.scribeId 
         });
       }
@@ -448,15 +425,12 @@ io.on('connection', (socket) => {
       return;
     }
 
-    const voteTally = gameState.topVoted;
-
     // Persist into narrative so late joiners can catch up
     gameState.addNarrativeEntry(chosen.sentence, scribeTag);
 
     io.to(roomId).emit('roundComplete', {
       chosenSentence: chosen.sentence,
       scribeTag,
-      voteTally,
       authorId: chosenId,
       authorName: chosen.playerName,
       round: gameState.currentRound

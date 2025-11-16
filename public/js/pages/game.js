@@ -8,6 +8,8 @@ export class GamePage {
     this.gameState = null;
     this.narrative = [];
     this.container = null;
+    this.timerInterval = null;
+    this.timeRemaining = 60;
   }
 
   render() {
@@ -18,7 +20,11 @@ export class GamePage {
         <div class="game-header">
           <div class="round-info">
             <span id="phase-display">SETTING</span>
-            <span id="round-display">ROUND 1/15</span>
+            <span id="round-display">ROUND 1/10</span>
+          </div>
+          <div class="timer-container" id="timer-container" style="display: none;">
+            <div class="timer-bar" id="timer-bar"></div>
+            <span class="timer-text" id="timer-text">60s</span>
           </div>
           <div class="scribe-indicator" id="scribe-indicator">
             SCRIBE: <span id="scribe-name">---</span>
@@ -115,20 +121,10 @@ export class GamePage {
       this.updateSubmissionProgress(totalSubmissions, requiredSubmissions);
     });
 
-    socket.on('votingPhase', ({ submissions }) => {
-      console.log(`🗳️ Voting phase started with ${submissions.length} submissions`);
-      this.showVotingPhase(submissions);
-    });
-
-    socket.on('voteReceived', ({ totalVotes, requiredVotes }) => {
-      console.log(`🗳️ Vote progress: ${totalVotes}/${requiredVotes}`);
-      this.updateVotingProgress(totalVotes, requiredVotes);
-    });
-
-    socket.on('scribeChoice', ({ topVoted, scribeId }) => {
-      console.log(`✍️ Scribe choice phase. Scribe: ${scribeId}, Top voted: ${topVoted.length}`);
+    socket.on('scribeChoice', ({ submissions, scribeId }) => {
+      console.log(`✍️ All submissions received. Scribe choosing...`);
       if (this.user._id === scribeId) {
-        this.showScribeChoice(topVoted);
+        this.showScribeChoice(submissions);
       } else {
         this.showWaitingForScribe();
       }
@@ -176,7 +172,7 @@ export class GamePage {
     }
 
     phaseDisplay.textContent = this.gameState.phase;
-    roundDisplay.textContent = `ROUND ${this.gameState.currentRound}/15`;
+    roundDisplay.textContent = `ROUND ${this.gameState.currentRound}/10`;
     scribeName.textContent = this.getPlayerName(this.gameState.scribeId);
   }
 
@@ -275,6 +271,14 @@ export class GamePage {
           this.submitSentence(textarea.value);
         });
       }
+      
+      // Start 60-second timer for submission
+      this.startTimer(60, () => {
+        // Auto-submit empty or current text on timeout
+        if (textarea && !submitBtn.disabled) {
+          this.submitSentence(textarea.value || '(No submission)');
+        }
+      });
     }
   }
 
@@ -288,6 +292,8 @@ export class GamePage {
       alert('Connection lost. Please refresh.');
       return;
     }
+    
+    this.stopTimer(); // Clear timer when submission is made
 
     console.log('📤 Submitting sentence:', sentence.substring(0, 50) + '...');
 
@@ -321,76 +327,18 @@ export class GamePage {
     }
   }
 
-  showVotingPhase(submissions) {
-    const phaseContainer = this.container?.querySelector('#game-phase');
-    if (!phaseContainer) return;
-
-    phaseContainer.innerHTML = `
-      <div class="voting-phase">
-        <h3>Vote for the Best Sentence</h3>
-        <div class="submissions-list">
-          ${submissions.map(sub => `
-            <div class="submission-card" data-id="${sub.playerId}">
-              <p class="submission-text">"${sub.sentence}"</p>
-              <button class="btn-vote" data-id="${sub.playerId}">Vote</button>
-            </div>
-          `).join('')}
-        </div>
-      </div>
-    `;
-
-    // Attach vote handlers
-    phaseContainer.querySelectorAll('.btn-vote').forEach(btn => {
-      btn.addEventListener('click', (e) => {
-        const submissionId = e.target.dataset.id;
-        this.submitVote(submissionId);
-      });
-    });
-  }
-
-  submitVote(submissionId) {
-    if (!window.socket) return;
-
-    window.socket.emit('submitVote', {
-      roomId: this.roomId,
-      submissionId
-    });
-
-    const phaseContainer = this.container?.querySelector('#game-phase');
-    if (phaseContainer) {
-      phaseContainer.innerHTML = `
-        <div class="waiting-state">
-          <p>✅ Vote submitted</p>
-          <p>Waiting for other votes...</p>
-        </div>
-      `;
-    }
-  }
-
-  updateVotingProgress(total, required) {
-    const phaseContainer = this.container?.querySelector('#game-phase');
-    if (phaseContainer) {
-      phaseContainer.innerHTML = `
-        <div class="waiting-state">
-          <p>✅ Vote submitted</p>
-          <p>Waiting for other votes... (${total}/${required})</p>
-        </div>
-      `;
-    }
-  }
-
-  showScribeChoice(topVoted) {
+  showScribeChoice(submissions) {
     const phaseContainer = this.container?.querySelector('#game-phase');
     if (!phaseContainer) return;
 
     phaseContainer.innerHTML = `
       <div class="scribe-choice">
-        <h3>You're the Scribe! Choose a sentence:</h3>
+        <h3>You're the Scribe! Choose the best sentence:</h3>
         <div class="submissions-list">
-          ${topVoted.map(sub => `
+          ${submissions.map(sub => `
             <div class="submission-card" data-id="${sub.playerId}">
               <p class="submission-text">"${sub.sentence}"</p>
-              <p class="vote-count">Votes: ${sub.votes || 0}</p>
+              <p class="author-name">By: ${sub.playerName}</p>
               <button class="btn-choose" data-id="${sub.playerId}">Choose This</button>
             </div>
           `).join('')}
@@ -409,10 +357,21 @@ export class GamePage {
         this.submitScribeChoice(chosenId, tag);
       });
     });
+    
+    // Start 60-second timer for scribe choice
+    this.startTimer(60, () => {
+      // Auto-select random submission on timeout
+      if (submissions.length > 0) {
+        const randomSub = submissions[Math.floor(Math.random() * submissions.length)];
+        this.submitScribeChoice(randomSub.playerId, '[AUTO-SELECTED]');
+      }
+    });
   }
 
   submitScribeChoice(chosenId, scribeTag) {
     if (!window.socket) return;
+    
+    this.stopTimer(); // Clear timer when choice is made
 
     window.socket.emit('scribeChoice', {
       roomId: this.roomId,
@@ -477,5 +436,61 @@ export class GamePage {
     }
     
     return 'Player';
+  }
+
+  startTimer(seconds, onComplete) {
+    this.stopTimer(); // Clear any existing timer
+    this.timeRemaining = seconds;
+    
+    const timerContainer = this.container?.querySelector('#timer-container');
+    const timerBar = this.container?.querySelector('#timer-bar');
+    const timerText = this.container?.querySelector('#timer-text');
+    
+    if (!timerContainer || !timerBar || !timerText) return;
+    
+    timerContainer.style.display = 'flex';
+    
+    this.timerInterval = setInterval(() => {
+      this.timeRemaining--;
+      
+      // Update timer display
+      timerText.textContent = `${this.timeRemaining}s`;
+      const percentage = (this.timeRemaining / seconds) * 100;
+      timerBar.style.width = `${percentage}%`;
+      
+      // Color changes: green > yellow (30s) > red (10s)
+      if (this.timeRemaining <= 10) {
+        timerBar.style.backgroundColor = '#e74c3c';
+        timerContainer.classList.add('critical');
+      } else if (this.timeRemaining <= 30) {
+        timerBar.style.backgroundColor = '#f39c12';
+        timerContainer.classList.add('warning');
+      } else {
+        timerBar.style.backgroundColor = '#2ecc71';
+      }
+      
+      // Time's up
+      if (this.timeRemaining <= 0) {
+        this.stopTimer();
+        if (onComplete) onComplete();
+      }
+    }, 1000);
+  }
+
+  stopTimer() {
+    if (this.timerInterval) {
+      clearInterval(this.timerInterval);
+      this.timerInterval = null;
+    }
+    
+    const timerContainer = this.container?.querySelector('#timer-container');
+    if (timerContainer) {
+      timerContainer.style.display = 'none';
+      timerContainer.classList.remove('warning', 'critical');
+    }
+  }
+
+  destroy() {
+    this.stopTimer();
   }
 }

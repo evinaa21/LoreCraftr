@@ -22,7 +22,7 @@ const storySchema = new mongoose.Schema({
   currentRound: {
     type: Number,
     default: 1,
-    max: 15
+    max: 10
   },
   scores: {
     type: Map,

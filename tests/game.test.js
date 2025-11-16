@@ -1,36 +1,16 @@
 const { calculateScores, POINTS } = require('../utils/scoring');
 
 describe('Scoring System', () => {
-  test('calculates vote points correctly', () => {
-    const voteTally = [
-      { submissionId: 'player1', votes: 3 },
-      { submissionId: 'player2', votes: 2 }
-    ];
-    
-    const scores = calculateScores(voteTally, 'player1', 'scribe1');
-    
-    expect(scores.player1).toBe(30 + 25); // 3 votes * 10 + consistency bonus
-    expect(scores.player2).toBe(20); // 2 votes * 10
-    expect(scores.scribe1).toBe(15); // scribe completion bonus
-  });
-
-  test('awards consistency bonus to chosen sentence', () => {
-    const voteTally = [
-      { submissionId: 'player1', votes: 2 }
-    ];
-    
-    const scores = calculateScores(voteTally, 'player1', 'scribe1');
-    
-    expect(scores.player1).toBe(20 + 25); // votes + consistency
-  });
-
   test('awards scribe completion bonus', () => {
-    const voteTally = [
-      { submissionId: 'player1', votes: 1 }
-    ];
+    const scores = calculateScores([], null, 'scribe1');
     
-    const scores = calculateScores(voteTally, 'player1', 'scribe1');
+    expect(scores.scribe1).toBe(POINTS.SCRIBE_COMPLETION);
+  });
+
+  test('awards chosen bonus to selected submission', () => {
+    const scores = calculateScores([], 'player1', 'scribe1');
     
+    expect(scores.player1).toBe(POINTS.CHOSEN_BONUS);
     expect(scores.scribe1).toBe(POINTS.SCRIBE_COMPLETION);
   });
 });
@@ -47,31 +27,31 @@ describe('GameState', () => {
     const game = new GameState('room1', players);
     
     expect(game.currentRound).toBe(1);
-    expect(game.maxRounds).toBe(15);
+    expect(game.maxRounds).toBe(10);
     expect(game.phase).toBe('SETTING');
     expect(game.getPhase()).toBe('SETTING');
   });
 
-  test('calculates phase correctly', () => {
+  test('calculates phase correctly for 10 rounds', () => {
     const players = [{ id: 'p1', name: 'Player 1' }];
     const game = new GameState('room1', players);
     
+    // SETTING: rounds 1-3
     game.currentRound = 1;
     expect(game.getPhase()).toBe('SETTING');
-    
-    game.currentRound = 5;
+    game.currentRound = 3;
     expect(game.getPhase()).toBe('SETTING');
     
-    game.currentRound = 6;
+    // ACTION: rounds 4-7
+    game.currentRound = 4;
+    expect(game.getPhase()).toBe('ACTION');
+    game.currentRound = 7;
     expect(game.getPhase()).toBe('ACTION');
     
-    game.currentRound = 10;
-    expect(game.getPhase()).toBe('ACTION');
-    
-    game.currentRound = 11;
+    // CONSEQUENCE: rounds 8-10
+    game.currentRound = 8;
     expect(game.getPhase()).toBe('CONSEQUENCE');
-    
-    game.currentRound = 15;
+    game.currentRound = 10;
     expect(game.getPhase()).toBe('CONSEQUENCE');
   });
 
@@ -110,16 +90,22 @@ describe('GameState', () => {
     }).toThrow('Scribe cannot submit a sentence');
   });
 
-  test('prevents voting for own submission', () => {
+  test('tracks all submissions correctly', () => {
     const players = [
       { id: 'p1', name: 'Player 1' },
-      { id: 'p2', name: 'Player 2' }
+      { id: 'p2', name: 'Player 2' },
+      { id: 'p3', name: 'Player 3' }
     ];
     
     const game = new GameState('room1', players);
     
-    expect(() => {
-      game.addVote('p1', 'p1');
-    }).toThrow('Cannot vote for your own submission');
+    // p1 is scribe, p2 and p3 can submit
+    const nonScribeId = game.players.find(id => id !== game.scribeId);
+    game.addSubmission(nonScribeId, 'First sentence', 'Player');
+    
+    expect(game.allSubmitted()).toBe(false);
+    
+    const submissions = game.getAllSubmissions();
+    expect(submissions.length).toBe(1);
   });
 });

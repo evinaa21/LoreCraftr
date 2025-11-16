@@ -31,6 +31,7 @@ export class DashboardPage {
         <div class="dashboard-actions">
           <button id="create-room-btn" class="btn-primary">CREATE ROOM</button>
           <button id="join-code-btn" class="btn-secondary">JOIN BY CODE</button>
+          <button id="profile-btn" class="btn-secondary">MY PROFILE</button>
           <button id="refresh-rooms-btn" class="btn-secondary">
             <span id="refresh-text">REFRESH</span>
           </button>
@@ -84,6 +85,10 @@ export class DashboardPage {
 
     container.querySelector('#join-code-btn').addEventListener('click', () => {
       this.showJoinCodeModal();
+    });
+    
+    container.querySelector('#profile-btn').addEventListener('click', () => {
+      router.navigate('/profile');
     });
 
     container.querySelector('#refresh-rooms-btn').addEventListener('click', () => {
