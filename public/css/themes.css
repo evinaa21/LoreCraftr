@@ -1,0 +1,978 @@
+/* LoreCraftr Theme System */
+
+/* ============================================
+   LIGHT/DARK MODE VARIABLES
+   ============================================ */
+
+:root {
+  /* Light Mode (Default) */
+  --bg-primary: #FFFFFF;
+  --bg-secondary: #F5F5F5;
+  --bg-tertiary: #E0E0E0;
+  --text-primary: #000000;
+  --text-secondary: #404040;
+  --text-tertiary: #808080;
+  --border-primary: #000000;
+  --border-secondary: #808080;
+  --shadow: rgba(0, 0, 0, 0.1);
+  --overlay: rgba(0, 0, 0, 0.5);
+  --input-bg: #FFFFFF;
+  --error-bg: #FFFFFF;
+  --error-text: #000000;
+}
+
+[data-theme="dark"] {
+  /* Dark Mode */
+  --bg-primary: #0A0A0A;
+  --bg-secondary: #1A1A1A;
+  --bg-tertiary: #2A2A2A;
+  --text-primary: #FFFFFF;
+  --text-secondary: #CCCCCC;
+  --text-tertiary: #808080;
+  --border-primary: #FFFFFF;
+  --border-secondary: #666666;
+  --shadow: rgba(255, 255, 255, 0.1);
+  --overlay: rgba(255, 255, 255, 0.15);
+  --input-bg: #1A1A1A;
+  --error-bg: #2A2A2A;
+  --error-text: #FFFFFF;
+}
+
+/* ============================================
+   COSMIC PARTICLE CANVAS
+   ============================================ */
+
+#cosmic-particles {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 0;
+  opacity: 0.4;
+  transition: opacity 0.3s ease;
+}
+
+/* Increase opacity in dark mode */
+[data-theme="dark"] #cosmic-particles {
+  opacity: 0.5;
+}
+
+/* Ensure content is above particles */
+#app {
+  position: relative;
+  z-index: 1;
+}
+
+.login-page,
+.dashboard-page,
+.lobby-page,
+.game-page {
+  position: relative;
+  z-index: 1;
+}
+
+/* ============================================
+   THEMED BACKGROUNDS (UPDATED)
+   ============================================ */
+
+/* Base game page with theme backgrounds */
+.game-page,
+.lobby-page {
+  position: relative;
+  overflow: hidden;
+}
+
+.game-page::before,
+.lobby-page::before {
+  content: '';
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: -1;
+  opacity: 0.05;
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  pointer-events: none;
+}
+
+/* Increase opacity for dark mode */
+[data-theme="dark"] .game-page::before,
+[data-theme="dark"] .lobby-page::before {
+  opacity: 0.08;
+}
+
+/* Gritty Sci-Fi Theme */
+[data-game-theme="Gritty Sci-Fi"]::before {
+  background-image: 
+    radial-gradient(circle at 20% 50%, rgba(0, 255, 255, 0.1) 0%, transparent 50%),
+    radial-gradient(circle at 80% 80%, rgba(255, 0, 255, 0.1) 0%, transparent 50%),
+    repeating-linear-gradient(
+      0deg,
+      transparent,
+      transparent 2px,
+      rgba(0, 255, 255, 0.03) 2px,
+      rgba(0, 255, 255, 0.03) 4px
+    );
+  animation: scan 8s linear infinite;
+}
+
+/* High Fantasy Theme */
+[data-game-theme="High Fantasy"]::before {
+  background-image: 
+    radial-gradient(circle at 30% 30%, rgba(139, 69, 19, 0.1) 0%, transparent 50%),
+    radial-gradient(circle at 70% 70%, rgba(218, 165, 32, 0.1) 0%, transparent 50%),
+    repeating-linear-gradient(
+      45deg,
+      transparent,
+      transparent 10px,
+      rgba(218, 165, 32, 0.02) 10px,
+      rgba(218, 165, 32, 0.02) 20px
+    );
+}
+
+/* Weird West Theme */
+[data-game-theme="Weird West"]::before {
+  background-image: 
+    radial-gradient(ellipse at 50% 100%, rgba(205, 133, 63, 0.1) 0%, transparent 70%),
+    radial-gradient(circle at 50% 0%, rgba(255, 69, 0, 0.05) 0%, transparent 50%),
+    repeating-linear-gradient(
+      90deg,
+      transparent,
+      transparent 50px,
+      rgba(139, 69, 19, 0.02) 50px,
+      rgba(139, 69, 19, 0.02) 100px
+    );
+}
+
+/* Cyberpunk Noir Theme */
+[data-game-theme="Cyberpunk Noir"]::before {
+  background-image: 
+    radial-gradient(circle at 10% 20%, rgba(255, 0, 128, 0.15) 0%, transparent 50%),
+    radial-gradient(circle at 90% 80%, rgba(0, 255, 255, 0.15) 0%, transparent 50%),
+    repeating-linear-gradient(
+      180deg,
+      transparent,
+      transparent 3px,
+      rgba(255, 0, 255, 0.03) 3px,
+      rgba(255, 0, 255, 0.03) 6px
+    );
+  animation: neon-flicker 4s ease-in-out infinite;
+}
+
+/* Cosmic Horror Theme */
+[data-game-theme="Cosmic Horror"]::before {
+  background-image: 
+    radial-gradient(circle at 50% 50%, rgba(75, 0, 130, 0.1) 0%, transparent 50%),
+    radial-gradient(circle at 20% 80%, rgba(138, 43, 226, 0.08) 0%, transparent 40%),
+    radial-gradient(circle at 80% 20%, rgba(72, 61, 139, 0.08) 0%, transparent 40%);
+  animation: cosmic-pulse 6s ease-in-out infinite;
+}
+
+/* Animations */
+@keyframes scan {
+  0% { background-position: 0 0; }
+  100% { background-position: 0 100vh; }
+}
+
+@keyframes neon-flicker {
+  0%, 100% { opacity: 0.05; }
+  50% { opacity: 0.08; }
+}
+
+@keyframes cosmic-pulse {
+  0%, 100% { opacity: 0.05; }
+  50% { opacity: 0.12; }
+}
+
+/* ============================================
+   THEME TOGGLE BUTTON
+   ============================================ */
+
+.theme-toggle {
+  position: fixed;
+  top: 1rem;
+  right: 1rem;
+  z-index: 1000;
+  background: var(--bg-primary);
+  border: 2px solid var(--border-primary);
+  width: 50px;
+  height: 50px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  padding: 0;
+}
+
+.theme-toggle:hover {
+  background: var(--bg-secondary);
+  transform: rotate(180deg);
+}
+
+.theme-toggle svg {
+  width: 24px;
+  height: 24px;
+  fill: var(--text-primary);
+  stroke: var(--text-primary);
+  transition: fill 0.3s ease, stroke 0.3s ease;
+}
+
+/* Ensure SVG is always visible regardless of theme */
+.theme-toggle svg path,
+.theme-toggle svg circle,
+.theme-toggle svg line {
+  fill: var(--text-primary);
+  stroke: var(--text-primary);
+  transition: fill 0.3s ease, stroke 0.3s ease;
+}
+
+/* Light mode: dark icons */
+[data-theme="light"] .theme-toggle svg,
+[data-theme="light"] .theme-toggle svg path,
+[data-theme="light"] .theme-toggle svg circle,
+[data-theme="light"] .theme-toggle svg line {
+  fill: #000000;
+  stroke: #000000;
+}
+
+/* Dark mode: white icons */
+[data-theme="dark"] .theme-toggle svg,
+[data-theme="dark"] .theme-toggle svg path,
+[data-theme="dark"] .theme-toggle svg circle,
+[data-theme="dark"] .theme-toggle svg line {
+  fill: #FFFFFF;
+  stroke: #FFFFFF;
+}
+
+/* Extra specificity for the sun icon's circle (shown in dark mode) */
+[data-theme="dark"] .theme-toggle svg circle {
+  fill: #FFFFFF;
+}
+
+/* Extra specificity for the moon icon's path (shown in light mode) */
+[data-theme="light"] .theme-toggle svg path {
+  fill: #000000;
+}
+
+/* Hover state with slight color change */
+.theme-toggle:hover svg,
+.theme-toggle:hover svg path,
+.theme-toggle:hover svg circle,
+.theme-toggle:hover svg line {
+  opacity: 0.8;
+}
+
+/* ============================================
+   UPDATED COLOR VARIABLES APPLICATION
+   ============================================ */
+
+/* Body & Core Elements */
+body {
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+/* Input Fields */
+.input-field,
+select.input-field,
+textarea.input-field {
+  border-bottom-color: var(--border-primary);
+  color: var(--text-primary);
+  background-color: var(--input-bg);
+  transition: all 0.3s ease;
+}
+
+.input-field::placeholder {
+  color: var(--text-tertiary);
+}
+
+.input-field:focus,
+select.input-field:focus,
+textarea.input-field:focus {
+  border-bottom-color: var(--text-primary);
+  background-color: var(--bg-secondary);
+}
+
+/* Buttons - Enhanced visibility */
+.btn-primary {
+  background-color: var(--text-primary);
+  color: var(--bg-primary);
+  border: 2px solid var(--text-primary);
+  transition: all 0.3s ease;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  box-shadow: 0 2px 4px var(--shadow);
+}
+
+.btn-primary:hover {
+  background-color: var(--text-secondary);
+  border-color: var(--text-secondary);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px var(--shadow);
+}
+
+.btn-primary:active {
+  transform: translateY(0);
+  box-shadow: 0 1px 2px var(--shadow);
+}
+
+.btn-secondary,
+.btn-ghost {
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
+  border: 2px solid var(--border-primary);
+  transition: all 0.3s ease;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  box-shadow: 0 2px 4px var(--shadow);
+}
+
+.btn-secondary:hover,
+.btn-ghost:hover {
+  background-color: var(--text-primary);
+  color: var(--bg-primary);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px var(--shadow);
+}
+
+.btn-secondary:active,
+.btn-ghost:active {
+  transform: translateY(0);
+  box-shadow: 0 1px 2px var(--shadow);
+}
+
+/* Ensure buttons are visible in dark mode */
+[data-theme="dark"] .btn-primary {
+  background-color: #FFFFFF;
+  color: #000000;
+  border-color: #FFFFFF;
+}
+
+[data-theme="dark"] .btn-primary:hover {
+  background-color: #CCCCCC;
+  border-color: #CCCCCC;
+}
+
+[data-theme="dark"] .btn-secondary,
+[data-theme="dark"] .btn-ghost {
+  background-color: #0A0A0A;
+  color: #FFFFFF;
+  border-color: #FFFFFF;
+}
+
+[data-theme="dark"] .btn-secondary:hover,
+[data-theme="dark"] .btn-ghost:hover {
+  background-color: #FFFFFF;
+  color: #000000;
+}
+
+/* Dashboard action buttons */
+.dashboard-actions {
+  display: flex;
+  gap: 1rem;
+  margin-bottom: 3rem;
+}
+
+.dashboard-actions .btn-primary,
+.dashboard-actions .btn-secondary {
+  min-width: 150px;
+  padding: 1rem 1.5rem;
+  font-size: 0.875rem;
+}
+
+/* Cards & Containers */
+.room-card,
+.lobby-container,
+.story-block,
+.game-phase,
+.players-sidebar,
+.modal-content,
+.login-container {
+  background-color: var(--bg-primary);
+  border-color: var(--border-primary);
+  transition: all 0.3s ease;
+}
+
+/* Headers */
+.dashboard-header {
+  background-color: var(--bg-secondary);
+  border-bottom-color: var(--border-primary);
+  transition: all 0.3s ease;
+}
+
+.logo {
+  border-bottom-color: var(--border-primary);
+  transition: all 0.3s ease;
+}
+
+/* Text Elements */
+.tagline,
+.char-count,
+.score,
+.stat-label,
+.room-code {
+  color: var(--text-tertiary);
+  transition: color 0.3s ease;
+}
+
+.username,
+.player-name,
+.room-info {
+  color: var(--text-secondary);
+  transition: color 0.3s ease;
+}
+
+/* Error Messages */
+.error-message {
+  background-color: var(--error-bg);
+  color: var(--error-text);
+  border-color: var(--border-primary);
+  transition: all 0.3s ease;
+}
+
+.notification-error {
+  background-color: var(--error-bg);
+  color: var(--error-text);
+  border-color: var(--border-primary);
+}
+
+/* Player Avatars - Fixed for dark mode */
+.player-avatar {
+  background-color: var(--bg-tertiary);
+  border-color: var(--border-primary);
+  color: var(--text-primary);
+  transition: all 0.3s ease;
+}
+
+/* Dark mode: make initials dark on light background */
+[data-theme="dark"] .player-avatar {
+  background-color: #FFFFFF;
+  color: #000000;
+  border-color: #FFFFFF;
+}
+
+/* Light mode: make initials dark on light background */
+[data-theme="light"] .player-avatar {
+  background-color: #E0E0E0;
+  color: #000000;
+  border-color: #000000;
+}
+
+/* Stat Items */
+.stat-item {
+  border-color: var(--border-primary);
+  background-color: var(--bg-primary);
+  transition: all 0.3s ease;
+}
+
+/* Theme Display */
+.theme-display {
+  background-color: var(--bg-secondary);
+  border-color: var(--border-primary);
+  color: var(--text-primary);
+  transition: all 0.3s ease;
+}
+
+/* Room Theme Badge */
+.room-theme-badge,
+.host-badge {
+  background-color: var(--bg-secondary);
+  border-color: var(--border-secondary);
+  color: var(--text-primary);
+  transition: all 0.3s ease;
+}
+
+/* Modal */
+.modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: var(--overlay);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  transition: all 0.3s ease;
+  backdrop-filter: blur(5px);
+}
+
+.modal-content {
+  background-color: var(--bg-primary);
+  border: 2px solid var(--border-primary);
+  padding: 2rem;
+  max-width: 500px;
+  width: 90%;
+  box-shadow: 0 10px 40px var(--shadow);
+  transition: all 0.3s ease;
+}
+
+.modal-content h2 {
+  font-size: 1.25rem;
+  letter-spacing: 0.1em;
+  margin-bottom: 1.5rem;
+  text-align: center;
+  color: var(--text-primary);
+  border-bottom: 2px solid var(--border-primary);
+  padding-bottom: 0.5rem;
+}
+
+.modal-actions {
+  display: flex;
+  gap: 1rem;
+  justify-content: flex-end;
+  margin-top: 1.5rem;
+}
+
+.modal-actions .btn-primary,
+.modal-actions .btn-secondary {
+  flex: 1;
+  padding: 0.75rem 1.5rem;
+}
+
+/* Form labels in modal */
+.modal-content label {
+  color: var(--text-primary);
+  font-weight: 600;
+}
+
+/* Notifications */
+.notification {
+  background-color: var(--text-primary);
+  color: var(--bg-primary);
+  border-color: var(--border-primary);
+  transition: all 0.3s ease;
+}
+
+/* Loading & Empty States */
+.loading,
+.empty-state,
+.waiting-state {
+  color: var(--text-tertiary);
+  transition: color 0.3s ease;
+}
+
+/* Room theme indicators - Updated for dark mode */
+.room-card[data-theme]::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 4px;
+  height: 100%;
+  opacity: 0.5;
+  transition: opacity 0.3s ease;
+}
+
+[data-theme="dark"] .room-card[data-theme]::after {
+  opacity: 0.7;
+}
+
+.room-card[data-theme="Gritty Sci-Fi"]::after {
+  background: linear-gradient(180deg, #00FFFF, #FF00FF);
+}
+
+.room-card[data-theme="High Fantasy"]::after {
+  background: linear-gradient(180deg, #DAA520, #8B4513);
+}
+
+.room-card[data-theme="Weird West"]::after {
+  background: linear-gradient(180deg, #FF4500, #CD853F);
+}
+
+.room-card[data-theme="Cyberpunk Noir"]::after {
+  background: linear-gradient(180deg, #FF0080, #00FFFF);
+}
+
+.room-card[data-theme="Cosmic Horror"]::after {
+  background: linear-gradient(180deg, #8A2BE2, #4B0082);
+}
+
+/* Select dropdown arrow - Dark mode fix */
+select.input-field {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23000' d='M6 9L1 4h10z'/%3E%3C/svg%3E");
+}
+
+[data-theme="dark"] select.input-field {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23FFF' d='M6 9L1 4h10z'/%3E%3C/svg%3E");
+}
+
+/* Submission/Voting Options */
+.submission-option,
+.voted-option {
+  border-color: var(--border-primary);
+  background-color: var(--bg-primary);
+  transition: all 0.3s ease;
+}
+
+.submission-option:hover,
+.voted-option:hover {
+  background-color: var(--bg-secondary);
+}
+
+.submission-option input:checked + label,
+.voted-option input:checked + label {
+  color: var(--text-primary);
+  font-weight: 600;
+}
+
+/* Narrative Lines */
+.narrative-line {
+  color: var(--text-primary);
+  transition: color 0.3s ease;
+}
+
+.line-num {
+  color: var(--text-tertiary);
+  transition: color 0.3s ease;
+}
+
+/* Prompt */
+.prompt {
+  border-color: var(--border-secondary);
+  color: var(--text-secondary);
+  background-color: var(--bg-secondary);
+  transition: all 0.3s ease;
+}
+
+/* Phase Indicators */
+.round-info,
+.scribe-indicator {
+  color: var(--text-primary);
+  transition: color 0.3s ease;
+}
+
+/* Links */
+a {
+  color: var(--text-primary);
+  transition: color 0.3s ease;
+}
+
+a:hover {
+  color: var(--text-secondary);
+}
+
+.toggle-auth a {
+  color: var(--text-primary);
+  text-decoration: underline;
+}
+
+/* Scrollbar - Dark mode */
+[data-theme="dark"] ::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+[data-theme="dark"] ::-webkit-scrollbar-track {
+  background: var(--bg-secondary);
+}
+
+[data-theme="dark"] ::-webkit-scrollbar-thumb {
+  background: var(--border-secondary);
+}
+
+[data-theme="dark"] ::-webkit-scrollbar-thumb:hover {
+  background: var(--border-primary);
+}
+
+/* Form Elements in Dark Mode */
+[data-theme="dark"] input[type="text"],
+[data-theme="dark"] input[type="email"],
+[data-theme="dark"] input[type="password"],
+[data-theme="dark"] textarea,
+[data-theme="dark"] select {
+  color: var(--text-primary);
+  background-color: var(--input-bg);
+  border-bottom-color: var(--border-primary);
+}
+
+[data-theme="dark"] input[type="text"]:focus,
+[data-theme="dark"] input[type="email"]:focus,
+[data-theme="dark"] input[type="password"]:focus,
+[data-theme="dark"] textarea:focus,
+[data-theme="dark"] select:focus {
+  background-color: var(--bg-secondary);
+  border-bottom-color: var(--text-primary);
+}
+
+/* Radio buttons and checkboxes in dark mode */
+[data-theme="dark"] input[type="radio"],
+[data-theme="dark"] input[type="checkbox"] {
+  accent-color: var(--text-primary);
+}
+
+/* Lobby actions alignment */
+.lobby-actions {
+  border-top: 1px solid var(--border-primary);
+  transition: border-color 0.3s ease;
+}
+
+/* Game complete screen */
+.game-complete h2 {
+  color: var(--text-primary);
+  transition: color 0.3s ease;
+}
+
+/* Theme selector in lobby */
+.theme-selector {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: 0.5rem;
+  margin-top: 1rem;
+}
+
+.theme-option {
+  padding: 0.75rem 1rem;
+  border: 2px solid var(--border-primary);
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
+  cursor: pointer;
+  transition: all 0.3s ease;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+}
+
+.theme-option:hover {
+  background-color: var(--text-primary);
+  color: var(--bg-primary);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px var(--shadow);
+}
+
+.theme-option.active {
+  background-color: var(--text-primary);
+  color: var(--bg-primary);
+  border-color: var(--text-primary);
+}
+
+.theme-option span:first-child {
+  font-size: 1.5rem;
+}
+
+/* Dark mode theme selector */
+[data-theme="dark"] .theme-option {
+  background-color: #1A1A1A;
+  border-color: #FFFFFF;
+  color: #FFFFFF;
+}
+
+[data-theme="dark"] .theme-option:hover,
+[data-theme="dark"] .theme-option.active {
+  background-color: #FFFFFF;
+  color: #000000;
+}
+
+/* ============================================
+   THEME ICONS & CARDS - ENHANCED
+   ============================================ */
+
+.room-theme-icon {
+  position: absolute;
+  top: 1rem;
+  left: 1rem;
+  width: 40px;
+  height: 40px;
+  z-index: 2;
+  opacity: 0.2;
+  transition: all 0.3s ease;
+}
+
+.room-theme-icon svg {
+  width: 100%;
+  height: 100%;
+  stroke: var(--text-primary);
+  fill: none;
+}
+
+.room-card:hover .room-theme-icon {
+  opacity: 0.4;
+  transform: scale(1.15) rotate(5deg);
+}
+
+/* Theme display in lobby */
+.theme-display {
+  padding: 1.5rem;
+  border: 2px solid var(--border-primary);
+  text-align: center;
+  background-color: var(--bg-secondary);
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+  transition: all 0.3s ease;
+}
+
+.theme-display-icon {
+  width: 60px;
+  height: 60px;
+  opacity: 0.8;
+}
+
+.theme-display-icon svg {
+  width: 100%;
+  height: 100%;
+  stroke: var(--text-primary);
+  fill: none;
+}
+
+.theme-display-name {
+  font-size: 1rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  color: var(--text-primary);
+}
+
+/* Theme selection grid in modal */
+.theme-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 0.75rem;
+  margin-top: 0.5rem;
+}
+
+.theme-card {
+  padding: 1rem;
+  border: 2px solid var(--border-primary);
+  background-color: var(--bg-primary);
+  cursor: pointer;
+  transition: all 0.3s ease;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+  text-align: center;
+  position: relative;
+}
+
+.theme-card::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: var(--text-primary);
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.theme-card:hover::before {
+  opacity: 0.05;
+}
+
+.theme-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 6px 16px var(--shadow);
+}
+
+.theme-card.selected {
+  background-color: var(--text-primary);
+  color: var(--bg-primary);
+  border-color: var(--text-primary);
+}
+
+.theme-card.selected .theme-icon svg {
+  stroke: var(--bg-primary);
+}
+
+.theme-icon {
+  width: 48px;
+  height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  z-index: 1;
+}
+
+.theme-icon svg {
+  width: 100%;
+  height: 100%;
+  stroke: var(--text-primary);
+  fill: none;
+  stroke-width: 2;
+  transition: stroke 0.3s ease;
+}
+
+.theme-name {
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  position: relative;
+  z-index: 1;
+}
+
+.theme-desc {
+  font-size: 0.625rem;
+  opacity: 0.7;
+  line-height: 1.3;
+  position: relative;
+  z-index: 1;
+}
+
+/* Dark mode theme cards */
+[data-theme="dark"] .theme-card {
+  background-color: #1A1A1A;
+  border-color: #FFFFFF;
+}
+
+[data-theme="dark"] .theme-card:hover {
+  background-color: #2A2A2A;
+}
+
+[data-theme="dark"] .theme-card.selected {
+  background-color: #FFFFFF;
+  color: #000000;
+}
+
+[data-theme="dark"] .theme-card.selected .theme-icon svg {
+  stroke: #000000;
+}
+
+[data-theme="dark"] .theme-option {
+  background-color: #1A1A1A;
+  border-color: #FFFFFF;
+  color: #FFFFFF;
+}
+
+[data-theme="dark"] .theme-option:hover {
+  background-color: #2A2A2A;
+}
+
+[data-theme="dark"] .theme-option.active {
+  background-color: #FFFFFF;
+  color: #000000;
+}
+
+[data-theme="dark"] .theme-option.active .theme-option-icon svg {
+  stroke: #000000;
+}
+
+/* Enhanced room cards with icons */
+.room-card {
+  border: 2px solid var(--border-primary);
+  padding: 1.5rem;
+  padding-left: 4.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  position: relative;
+  background-color: var(--bg-primary);
+  transition: all 0.3s ease;
+  overflow: hidden;
+}
+
+/* ...rest of existing code... */
