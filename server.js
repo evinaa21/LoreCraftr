@@ -295,8 +295,10 @@ io.on('connection', (socket) => {
   socket.on('startGame', async ({ roomId, players }) => {
     try {
       console.log(`🎮 Starting game in room ${roomId}...`);
+      console.log(`  Socket ID: ${socket.id}`);
+      console.log(`  User: ${socket.username}`);
       
-      const room = await Room.findById(roomId).lean(); // Use .lean() for performance
+      const room = await Room.findById(roomId).lean();
       if (!room) {
         console.error(`❌ Room not found: ${roomId}`);
         socket.emit('error', { message: 'Room not found' });
@@ -348,8 +350,19 @@ io.on('connection', (socket) => {
       };
 
       console.log(`📡 Emitting gameStarted to room ${roomId}...`);
+      console.log(`  Data:`, JSON.stringify({
+        round: gameData.currentRound,
+        phase: gameData.phase,
+        scribeId: gameData.scribeId,
+        hasOrigin: !!gameData.origin,
+        hasPrompt: !!gameData.prompt,
+        theme: gameData.theme
+      }));
+
+      // THIS IS THE CRITICAL LINE - Make sure it's actually executing
       io.to(roomId).emit('gameStarted', gameData);
-      console.log(`✅ Game started successfully`);
+      
+      console.log(`✅ gameStarted emitted to ${roomSockets.get(roomId)?.size || 0} sockets in room ${roomId}`);
       
     } catch (error) {
       console.error('❌ Error starting game:', error.message);
