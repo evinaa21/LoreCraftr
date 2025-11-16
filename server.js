@@ -59,6 +59,8 @@ app.set('trust proxy', 1);
 // Store active game states and room sockets
 const gameStates = new Map();
 const roomSockets = new Map();
+const promptCache = new Map(); // Cache prompts by theme+category
+const originCache = new Map(); // Cache origins by theme
 
 // MongoDB Connection with retry logic
 const connectDB = async (retries = 5) => {
@@ -135,6 +137,77 @@ io.use((socket, next) => {
   } catch (err) {
     console.error('Socket auth failed:', err.message);
     next(new Error('Invalid token'));
+  }
+});
+
+// Helper functions for room socket management
+function addToRoomSockets(roomId, socketId) {
+  if (!roomSockets.has(roomId)) {
+    roomSockets.set(roomId, new Set());
+  }
+  roomSockets.get(roomId).add(socketId);
+}
+
+function removeFromRoomSockets(roomId, socketId) {
+  if (roomSockets.has(roomId)) {
+    roomSockets.get(roomId).delete(socketId);
+    if (roomSockets.get(roomId).size === 0) {
+      roomSockets.delete(roomId);
+    }
+  }
+}
+
+async function getCachedPrompt(theme, category) {
+  const key = `${theme}-${category}`;
+  
+  if (promptCache.has(key)) {
+    const cached = promptCache.get(key);
+    return cached[Math.floor(Math.random() * cached.length)];
+  }
+  
+  const prompts = await Prompt.find({ theme, category }).lean();
+  if (prompts.length === 0) return null;
+  
+  promptCache.set(key, prompts);
+  return prompts[Math.floor(Math.random() * prompts.length)];
+}
+
+async function getCachedOrigin(theme) {
+  if (originCache.has(theme)) {
+    const cached = originCache.get(theme);
+    return cached[Math.floor(Math.random() * cached.length)];
+  }
+  
+  const origins = await Origin.find({ theme }).lean();
+  if (origins.length === 0) return null;
+  
+  originCache.set(theme, origins);
+  return origins[Math.floor(Math.random() * origins.length)];
+}
+
+// Pre-cache prompts and origins on startup
+mongoose.connection.once('open', async () => {
+  console.log('✓ Pre-caching game content...');
+  
+  try {
+    const themes = ['Gritty Sci-Fi', 'High Fantasy', 'Weird West', 'Cyberpunk Noir', 'Cosmic Horror'];
+    const categories = ['SETTING', 'ACTION', 'CONSEQUENCE'];
+    
+    // Cache all prompts
+    for (const theme of themes) {
+      for (const category of categories) {
+        const prompts = await Prompt.find({ theme, category }).lean();
+        promptCache.set(`${theme}-${category}`, prompts);
+      }
+      
+      // Cache all origins
+      const origins = await Origin.find({ theme }).lean();
+      originCache.set(theme, origins);
+    }
+    
+    console.log(`✓ Cached ${promptCache.size} prompt sets and ${originCache.size} origin sets`);
+  } catch (error) {
+    console.error('⚠ Warning: Could not pre-cache content:', error.message);
   }
 });
 
@@ -222,54 +295,41 @@ io.on('connection', (socket) => {
   socket.on('startGame', async ({ roomId, players }) => {
     try {
       console.log(`🎮 Starting game in room ${roomId}...`);
-      console.log(`  Socket ID: ${socket.id}`);
-      console.log(`  User: ${socket.username}`);
       
-      // Get room to fetch theme
-      const room = await Room.findById(roomId);
+      const room = await Room.findById(roomId).lean(); // Use .lean() for performance
       if (!room) {
         console.error(`❌ Room not found: ${roomId}`);
         socket.emit('error', { message: 'Room not found' });
         return;
       }
 
-      console.log(`  Theme: ${room.theme}`);
-      console.log(`  Players: ${players.length}`);
+      console.log(`  Theme: ${room.theme}, Players: ${players.length}`);
 
-      // Fetch story origin for the theme
-      const originCount = await Origin.countDocuments({ theme: room.theme });
-      console.log(`  Origins available: ${originCount}`);
-      
-      if (originCount === 0) {
-        console.error(`❌ No origins found for theme: ${room.theme}`);
-        socket.emit('error', { message: `No story origins available for ${room.theme}. Please run: npm run seed` });
+      // Use cached queries with timeout
+      const [origin, prompt] = await Promise.race([
+        Promise.all([
+          getCachedOrigin(room.theme),
+          getCachedPrompt(room.theme, 'SETTING')
+        ]),
+        new Promise((_, reject) => 
+          setTimeout(() => reject(new Error('Database query timeout')), 5000)
+        )
+      ]);
+
+      if (!origin || !prompt) {
+        console.error(`❌ Missing content for theme: ${room.theme}`);
+        socket.emit('error', { 
+          message: `Content not available for ${room.theme}. Please try another theme.` 
+        });
         return;
       }
-      
-      const randomOrigin = Math.floor(Math.random() * originCount);
-      const origin = await Origin.findOne({ theme: room.theme }).skip(randomOrigin);
+
       console.log(`  ✓ Selected origin: "${origin.title}"`);
-
-      // Fetch initial prompt for SETTING phase
-      const promptCount = await Prompt.countDocuments({ theme: room.theme, category: 'SETTING' });
-      console.log(`  SETTING prompts available: ${promptCount}`);
-      
-      if (promptCount === 0) {
-        console.error(`❌ No SETTING prompts found for theme: ${room.theme}`);
-        socket.emit('error', { message: `No prompts available for ${room.theme}. Please run: npm run seed` });
-        return;
-      }
-      
-      const randomPrompt = Math.floor(Math.random() * promptCount);
-      const prompt = await Prompt.findOne({ theme: room.theme, category: 'SETTING' }).skip(randomPrompt);
       console.log(`  ✓ Selected prompt: "${prompt.text}"`);
 
-      // Create game state
       const gameState = new GameState(roomId, players);
       gameStates.set(roomId, gameState);
-      console.log(`  ✓ Game state created`);
-      console.log(`  ✓ Scribe ID: ${gameState.scribeId}`);
-
+      
       const gameData = {
         currentRound: gameState.currentRound,
         phase: gameState.getPhase(),
@@ -288,23 +348,15 @@ io.on('connection', (socket) => {
       };
 
       console.log(`📡 Emitting gameStarted to room ${roomId}...`);
-      console.log(`  Data:`, {
-        round: gameData.currentRound,
-        phase: gameData.phase,
-        scribeId: gameData.scribeId,
-        hasOrigin: !!gameData.origin,
-        hasPrompt: !!gameData.prompt
-      });
-
-      // Emit to ALL clients in the room (including sender)
       io.to(roomId).emit('gameStarted', gameData);
-      
-      console.log(`✅ gameStarted emitted successfully to room ${roomId}`);
+      console.log(`✅ Game started successfully`);
       
     } catch (error) {
-      console.error('❌ Error starting game:', error);
-      console.error('Stack trace:', error.stack);
-      socket.emit('error', { message: 'Failed to start game: ' + error.message });
+      console.error('❌ Error starting game:', error.message);
+      console.error('Stack:', error.stack);
+      socket.emit('error', { 
+        message: 'Failed to start game. Please try again.' 
+      });
     }
   });
 
@@ -369,16 +421,19 @@ io.on('connection', (socket) => {
   // Scribe choice
   socket.on('scribeChoice', async ({ roomId, chosenId, scribeTag }) => {
     const gameState = gameStates.get(roomId);
-    if (!gameState) return;
+    if (!gameState) {
+      socket.emit('error', { message: 'Game not found' });
+      return;
+    }
 
     if (socket.userId !== gameState.scribeId) {
-      socket.emit('error', { message: 'Only the scribe can make this choice' });
+      socket.emit('error', { message: 'Only scribe can finalize' });
       return;
     }
 
     const chosen = gameState.submissions.get(chosenId);
     if (!chosen) {
-      socket.emit('error', { message: 'Invalid submission' });
+      socket.emit('error', { message: 'Invalid choice' });
       return;
     }
 
@@ -398,22 +453,35 @@ io.on('connection', (socket) => {
     if (gameState.isComplete()) {
       io.to(roomId).emit('gameComplete');
       gameStates.delete(roomId);
-      console.log(`✓ Game completed in room ${roomId}`);
+      console.log(`✓ Game ${roomId} completed`);
     } else {
-      // Fetch new prompt for the current phase
-      const room = await Room.findById(roomId);
-      const phase = gameState.getPhase();
-      
-      const promptCount = await Prompt.countDocuments({ theme: room.theme, category: phase });
-      const randomPrompt = Math.floor(Math.random() * promptCount);
-      const prompt = await Prompt.findOne({ theme: room.theme, category: phase }).skip(randomPrompt);
-      
-      io.to(roomId).emit('nextRound', {
-        currentRound: gameState.currentRound,
-        phase: gameState.getPhase(),
-        scribeId: gameState.scribeId,
-        prompt: prompt
-      });
+      try {
+        const room = await Room.findById(roomId).lean();
+        if (!room) {
+          throw new Error('Room not found');
+        }
+
+        const newPrompt = await Promise.race([
+          getCachedPrompt(room.theme, gameState.getPhase()),
+          new Promise((_, reject) => 
+            setTimeout(() => reject(new Error('Prompt fetch timeout')), 3000)
+          )
+        ]);
+
+        io.to(roomId).emit('nextRound', {
+          currentRound: gameState.currentRound,
+          phase: gameState.getPhase(),
+          scribeId: gameState.scribeId,
+          prompt: newPrompt ? { text: newPrompt.text, category: newPrompt.category } : null
+        });
+        
+        console.log(`✓ Round ${gameState.currentRound} started in ${roomId}`);
+      } catch (error) {
+        console.error('❌ Error advancing round:', error.message);
+        io.to(roomId).emit('error', { 
+          message: 'Error advancing to next round' 
+        });
+      }
     }
   });
 
@@ -431,23 +499,6 @@ io.on('connection', (socket) => {
     }
   });
 });
-
-// Helper functions for room socket management
-function addToRoomSockets(roomId, socketId) {
-  if (!roomSockets.has(roomId)) {
-    roomSockets.set(roomId, new Set());
-  }
-  roomSockets.get(roomId).add(socketId);
-}
-
-function removeFromRoomSockets(roomId, socketId) {
-  if (roomSockets.has(roomId)) {
-    roomSockets.get(roomId).delete(socketId);
-    if (roomSockets.get(roomId).size === 0) {
-      roomSockets.delete(roomId);
-    }
-  }
-}
 
 // Serve frontend
 app.get('*', (req, res) => {
