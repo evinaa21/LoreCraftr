@@ -191,7 +191,9 @@ export class LobbyPage {
       container.setAttribute('data-game-theme', theme);
       this.updateUI(container.querySelector('.lobby-container').parentElement);
       
-      this.socket.emit('themeChanged', { roomId: this.roomId, theme });
+      if (this.socket) {
+        this.socket.emit('themeChanged', { roomId: this.roomId, theme });
+      }
     } catch (error) {
       console.error('Error changing theme:', error);
       alert('Failed to change theme');
@@ -207,7 +209,9 @@ export class LobbyPage {
         }
       });
 
-      this.socket.emit('leaveRoom', { roomId: this.roomId });
+      if (this.socket) {
+        this.socket.emit('leaveRoom', { roomId: this.roomId });
+      }
       router.navigate('/dashboard');
     } catch (error) {
       console.error('Error leaving room:', error);
@@ -228,10 +232,12 @@ export class LobbyPage {
         throw new Error(error.error || 'Failed to start game');
       }
 
-      this.socket.emit('startGame', {
-        roomId: this.roomId,
-        players: this.room.players.map(p => ({ id: p._id, name: p.username }))
-      });
+      if (this.socket) {
+        this.socket.emit('startGame', {
+          roomId: this.roomId,
+          players: this.room.players.map(p => ({ id: p._id, name: p.username }))
+        });
+      }
     } catch (error) {
       console.error('Error starting game:', error);
       alert(error.message);

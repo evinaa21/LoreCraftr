@@ -24,13 +24,13 @@ class LoreCraftr {
     // Check authentication
     this.currentUser = await auth.checkSession();
     
-    // Initialize router
-    router.init(this.currentUser);
-    
-    // Set up socket if authenticated
+    // Set up socket if authenticated (before router init)
     if (this.currentUser) {
       this.initSocket();
     }
+    
+    // Initialize router after socket is ready
+    router.init(this.currentUser);
     
     // Add particle control to settings (optional)
     this.addParticleControls();
@@ -59,6 +59,9 @@ class LoreCraftr {
     this.socket = io(window.location.origin, {
       auth: { token }
     });
+    
+    // Make socket available globally immediately
+    window.socket = this.socket;
 
     this.socket.on('connect', () => {
       console.log('✓ Connected to server');
@@ -72,9 +75,6 @@ class LoreCraftr {
       console.error('Socket error:', error);
       this.showNotification(error.message, 'error');
     });
-
-    // Make socket available globally
-    window.socket = this.socket;
   }
 
   showNotification(message, type = 'info') {

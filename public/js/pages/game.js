@@ -46,6 +46,13 @@ export class GamePage {
 
   setupSocketListeners() {
     const socket = window.socket;
+    
+    if (!socket) {
+      console.error('Socket not initialized');
+      alert('Connection error. Please refresh the page.');
+      router.navigate('/dashboard');
+      return;
+    }
 
     socket.on('game-started', (data) => {
       this.gameState = data;
@@ -137,6 +144,11 @@ export class GamePage {
 
   submitSentence(sentence) {
     if (!sentence.trim()) return;
+    
+    if (!window.socket) {
+      alert('Connection lost. Please refresh.');
+      return;
+    }
 
     window.socket.emit('submit-sentence', {
       roomId: this.roomId,
@@ -193,6 +205,11 @@ export class GamePage {
   }
 
   submitVote(submissionId) {
+    if (!window.socket) {
+      alert('Connection lost. Please refresh.');
+      return;
+    }
+    
     window.socket.emit('submit-vote', {
       roomId: this.roomId,
       voterId: this.user._id,
@@ -242,7 +259,7 @@ export class GamePage {
       const selected = phaseContainer.querySelector('input[name="scribe-choice"]:checked');
       const tag = phaseContainer.querySelector('#scribe-tag').value;
       
-      if (selected) {
+      if (selected && window.socket) {
         window.socket.emit('scribe-select', {
           roomId: this.roomId,
           chosenId: selected.value,
