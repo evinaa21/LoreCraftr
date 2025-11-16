@@ -299,4 +299,183 @@ export class GamePage {
     });
 
     const phaseContainer = this.container?.querySelector('#game-phase');
-    if
+    if (phaseContainer) {
+      phaseContainer.innerHTML = `
+        <div class="waiting-state">
+          <p>✅ Sentence submitted</p>
+          <p>Waiting for other players...</p>
+        </div>
+      `;
+    }
+  }
+
+  updateSubmissionProgress(total, required) {
+    const phaseContainer = this.container?.querySelector('#game-phase');
+    if (phaseContainer) {
+      phaseContainer.innerHTML = `
+        <div class="waiting-state">
+          <p>✅ Sentence submitted</p>
+          <p>Waiting for other players... (${total}/${required})</p>
+        </div>
+      `;
+    }
+  }
+
+  showVotingPhase(submissions) {
+    const phaseContainer = this.container?.querySelector('#game-phase');
+    if (!phaseContainer) return;
+
+    phaseContainer.innerHTML = `
+      <div class="voting-phase">
+        <h3>Vote for the Best Sentence</h3>
+        <div class="submissions-list">
+          ${submissions.map(sub => `
+            <div class="submission-card" data-id="${sub.playerId}">
+              <p class="submission-text">"${sub.sentence}"</p>
+              <button class="btn-vote" data-id="${sub.playerId}">Vote</button>
+            </div>
+          `).join('')}
+        </div>
+      </div>
+    `;
+
+    // Attach vote handlers
+    phaseContainer.querySelectorAll('.btn-vote').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        const submissionId = e.target.dataset.id;
+        this.submitVote(submissionId);
+      });
+    });
+  }
+
+  submitVote(submissionId) {
+    if (!window.socket) return;
+
+    window.socket.emit('submitVote', {
+      roomId: this.roomId,
+      submissionId
+    });
+
+    const phaseContainer = this.container?.querySelector('#game-phase');
+    if (phaseContainer) {
+      phaseContainer.innerHTML = `
+        <div class="waiting-state">
+          <p>✅ Vote submitted</p>
+          <p>Waiting for other votes...</p>
+        </div>
+      `;
+    }
+  }
+
+  updateVotingProgress(total, required) {
+    const phaseContainer = this.container?.querySelector('#game-phase');
+    if (phaseContainer) {
+      phaseContainer.innerHTML = `
+        <div class="waiting-state">
+          <p>✅ Vote submitted</p>
+          <p>Waiting for other votes... (${total}/${required})</p>
+        </div>
+      `;
+    }
+  }
+
+  showScribeChoice(topVoted) {
+    const phaseContainer = this.container?.querySelector('#game-phase');
+    if (!phaseContainer) return;
+
+    phaseContainer.innerHTML = `
+      <div class="scribe-choice">
+        <h3>You're the Scribe! Choose a sentence:</h3>
+        <div class="submissions-list">
+          ${topVoted.map(sub => `
+            <div class="submission-card" data-id="${sub.playerId}">
+              <p class="submission-text">"${sub.sentence}"</p>
+              <p class="vote-count">Votes: ${sub.votes || 0}</p>
+              <button class="btn-choose" data-id="${sub.playerId}">Choose This</button>
+            </div>
+          `).join('')}
+        </div>
+        <div class="scribe-tag-input">
+          <label>Add your scribe tag (optional):</label>
+          <input type="text" id="scribe-tag" placeholder="e.g., [DRAMATIC]" maxlength="20">
+        </div>
+      </div>
+    `;
+
+    phaseContainer.querySelectorAll('.btn-choose').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        const chosenId = e.target.dataset.id;
+        const tag = document.getElementById('scribe-tag')?.value || '';
+        this.submitScribeChoice(chosenId, tag);
+      });
+    });
+  }
+
+  submitScribeChoice(chosenId, scribeTag) {
+    if (!window.socket) return;
+
+    window.socket.emit('scribeChoice', {
+      roomId: this.roomId,
+      chosenId,
+      scribeTag
+    });
+
+    const phaseContainer = this.container?.querySelector('#game-phase');
+    if (phaseContainer) {
+      phaseContainer.innerHTML = `
+        <div class="waiting-state">
+          <p>✅ Choice submitted</p>
+          <p>Preparing next round...</p>
+        </div>
+      `;
+    }
+  }
+
+  showWaitingForScribe() {
+    const phaseContainer = this.container?.querySelector('#game-phase');
+    if (phaseContainer) {
+      phaseContainer.innerHTML = `
+        <div class="waiting-state">
+          <p>Waiting for Scribe to choose...</p>
+        </div>
+      `;
+    }
+  }
+
+  addToNarrative(sentence, scribeTag) {
+    const tag = scribeTag ? ` ${scribeTag}` : '';
+    this.narrative.push({ sentence: sentence + tag, tag: scribeTag });
+    
+    if (this.container) {
+      this.displayStoryContent();
+    }
+  }
+
+  showGameComplete() {
+    const phaseContainer = this.container?.querySelector('#game-phase');
+    if (phaseContainer) {
+      phaseContainer.innerHTML = `
+        <div class="game-complete">
+          <h2>🎉 Story Complete!</h2>
+          <p>Your collaborative tale has been forged.</p>
+          <button class="btn" onclick="router.navigate('/dashboard')">Back to Dashboard</button>
+        </div>
+      `;
+    }
+  }
+
+  getPlayerName(playerId) {
+    if (!playerId) return 'Unknown';
+    
+    // If it's the current user
+    if (playerId === this.user._id) return this.user.username;
+    
+    // Try to find in game state players
+    if (this.gameState?.players) {
+      const player = this.gameState.players.find(p => p.id === playerId);
+      if (player) return player.name;
+    }
+    
+    return 'Player';
+  }
+}
