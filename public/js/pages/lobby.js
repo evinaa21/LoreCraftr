@@ -155,24 +155,50 @@ export class LobbyPage {
     console.log('📍 Joining room:', this.roomId);
     this.socket.emit('joinRoom', { roomId: this.roomId });
 
-    this.socket.on('playerJoined', () => {
-      this.loadRoom(document.querySelector('.lobby-container').parentElement);
-    });
+    // Store references to listeners so we can clean them up
+    this.playerJoinedHandler = () => {
+      const container = document.querySelector('.lobby-container');
+      if (container && container.parentElement) {
+        this.loadRoom(container.parentElement);
+      }
+    };
 
-    this.socket.on('playerLeft', () => {
-      this.loadRoom(document.querySelector('.lobby-container').parentElement);
-    });
+    this.playerLeftHandler = () => {
+      const container = document.querySelector('.lobby-container');
+      if (container && container.parentElement) {
+        this.loadRoom(container.parentElement);
+      }
+    };
 
-    this.socket.on('themeUpdated', ({ theme }) => {
-      this.room.theme = theme;
-      this.updateUI(document.querySelector('.lobby-container').parentElement);
-    });
+    this.themeUpdatedHandler = ({ theme }) => {
+      const container = document.querySelector('.lobby-container');
+      if (container && container.parentElement && this.room) {
+        this.room.theme = theme;
+        this.updateUI(container.parentElement);
+      }
+    };
 
-    // IMPORTANT: Navigate to game page when game starts
-    this.socket.on('gameStarted', (data) => {
+    this.gameStartedHandler = (data) => {
       console.log('✅ gameStarted received in lobby, navigating to game...');
+      // Clean up lobby listeners before navigating
+      this.cleanup();
       router.navigate(`/game/${this.roomId}`);
-    });
+    };
+
+    this.socket.on('playerJoined', this.playerJoinedHandler);
+    this.socket.on('playerLeft', this.playerLeftHandler);
+    this.socket.on('themeUpdated', this.themeUpdatedHandler);
+    this.socket.on('gameStarted', this.gameStartedHandler);
+  }
+
+  cleanup() {
+    if (this.socket) {
+      // Remove lobby-specific listeners
+      if (this.playerJoinedHandler) this.socket.off('playerJoined', this.playerJoinedHandler);
+      if (this.playerLeftHandler) this.socket.off('playerLeft', this.playerLeftHandler);
+      if (this.themeUpdatedHandler) this.socket.off('themeUpdated', this.themeUpdatedHandler);
+      if (this.gameStartedHandler) this.socket.off('gameStarted', this.gameStartedHandler);
+    }
   }
 
   async changeTheme(theme) {
@@ -206,6 +232,9 @@ export class LobbyPage {
 
   async leaveRoom() {
     try {
+      // Clean up listeners first
+      this.cleanup();
+
       await fetch(`${API_URL}/rooms/leave/${this.roomId}`, {
         method: 'POST',
         headers: {
