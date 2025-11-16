@@ -13,6 +13,8 @@ const roomRoutes = require('./routes/rooms');
 const storyRoutes = require('./routes/stories');
 const Room = require('./models/Room');
 const GameState = require('./models/GameState');
+const Origin = require('./models/Origin');
+const Prompt = require('./models/Prompt');
 
 const app = express();
 const server = http.createServer(app);
@@ -219,17 +221,38 @@ io.on('connection', (socket) => {
   // Start game
   socket.on('startGame', async ({ roomId, players }) => {
     try {
+      // Get room to fetch theme
+      const room = await Room.findById(roomId);
+      if (!room) {
+        socket.emit('error', { message: 'Room not found' });
+        return;
+      }
+
+      // Fetch story origin for the theme
+      const originCount = await Origin.countDocuments({ theme: room.theme });
+      const randomOrigin = Math.floor(Math.random() * originCount);
+      const origin = await Origin.findOne({ theme: room.theme }).skip(randomOrigin);
+
+      // Fetch initial prompt for SETTING phase
+      const promptCount = await Prompt.countDocuments({ theme: room.theme, category: 'SETTING' });
+      const randomPrompt = Math.floor(Math.random() * promptCount);
+      const prompt = await Prompt.findOne({ theme: room.theme, category: 'SETTING' }).skip(randomPrompt);
+
       const gameState = new GameState(roomId, players);
       gameStates.set(roomId, gameState);
-      
+
       io.to(roomId).emit('gameStarted', {
         currentRound: gameState.currentRound,
         phase: gameState.getPhase(),
         scribeId: gameState.scribeId,
-        maxRounds: gameState.maxRounds
+        maxRounds: gameState.maxRounds,
+        theme: room.theme,
+        origin: origin,
+        prompt: prompt,
+        narrative: []
       });
-      
-      console.log(`✓ Game started in room ${roomId}`);
+
+      console.log(`✓ Game started in room ${roomId} with theme: ${room.theme}`);
     } catch (error) {
       console.error('Error starting game:', error);
       socket.emit('error', { message: 'Failed to start game' });
@@ -237,7 +260,7 @@ io.on('connection', (socket) => {
   });
 
   // Submit sentence
-  socket.on('submitSentence', ({ roomId, sentence }) => {
+  socket.on('submitSentence', ({ roomId, sentence, playerId, playerName }) => {
     const gameState = gameStates.get(roomId);
     if (!gameState) {
       socket.emit('error', { message: 'Game not found' });
@@ -245,11 +268,15 @@ io.on('connection', (socket) => {
     }
 
     try {
-      gameState.addSubmission(socket.userId, sentence, socket.username);
+      // Use provided playerId and playerName, fallback to socket info
+      const userId = playerId || socket.userId;
+      const username = playerName || socket.username;
+      
+      gameState.addSubmission(userId, sentence, username);
       
       io.to(roomId).emit('submissionReceived', {
-        playerId: socket.userId,
-        playerName: socket.username,
+        playerId: userId,
+        playerName: username,
         totalSubmissions: gameState.submissions.size,
         requiredSubmissions: gameState.players.length - 1
       });
@@ -291,7 +318,7 @@ io.on('connection', (socket) => {
   });
 
   // Scribe choice
-  socket.on('scribeChoice', ({ roomId, chosenId, scribeTag }) => {
+  socket.on('scribeChoice', async ({ roomId, chosenId, scribeTag }) => {
     const gameState = gameStates.get(roomId);
     if (!gameState) return;
 
@@ -324,10 +351,19 @@ io.on('connection', (socket) => {
       gameStates.delete(roomId);
       console.log(`✓ Game completed in room ${roomId}`);
     } else {
+      // Fetch new prompt for the current phase
+      const room = await Room.findById(roomId);
+      const phase = gameState.getPhase();
+      
+      const promptCount = await Prompt.countDocuments({ theme: room.theme, category: phase });
+      const randomPrompt = Math.floor(Math.random() * promptCount);
+      const prompt = await Prompt.findOne({ theme: room.theme, category: phase }).skip(randomPrompt);
+      
       io.to(roomId).emit('nextRound', {
         currentRound: gameState.currentRound,
         phase: gameState.getPhase(),
-        scribeId: gameState.scribeId
+        scribeId: gameState.scribeId,
+        prompt: prompt
       });
     }
   });

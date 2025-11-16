@@ -54,25 +54,27 @@ export class GamePage {
       return;
     }
 
-    socket.on('game-started', (data) => {
+    socket.on('gameStarted', (data) => {
       this.gameState = data;
+      this.narrative = data.narrative || [];
       this.updateGameUI();
+      this.displayStoryContent();
       this.showSubmitPhase();
     });
 
-    socket.on('submission-received', ({ totalSubmissions, requiredSubmissions }) => {
+    socket.on('submissionReceived', ({ totalSubmissions, requiredSubmissions }) => {
       this.updateSubmissionProgress(totalSubmissions, requiredSubmissions);
     });
 
-    socket.on('voting-phase', ({ submissions }) => {
+    socket.on('votingPhase', ({ submissions }) => {
       this.showVotingPhase(submissions);
     });
 
-    socket.on('vote-received', ({ totalVotes, requiredVotes }) => {
+    socket.on('voteReceived', ({ totalVotes, requiredVotes }) => {
       this.updateVotingProgress(totalVotes, requiredVotes);
     });
 
-    socket.on('scribe-choice', ({ topVoted, scribeId }) => {
+    socket.on('scribeChoice', ({ topVoted, scribeId }) => {
       if (this.user._id === scribeId) {
         this.showScribeChoice(topVoted);
       } else {
@@ -80,17 +82,18 @@ export class GamePage {
       }
     });
 
-    socket.on('round-complete', ({ chosenSentence, scribeTag, round }) => {
-      this.addToNarrative(chosenSentence.sentence, scribeTag);
+    socket.on('roundComplete', ({ chosenSentence, scribeTag, round }) => {
+      this.addToNarrative(chosenSentence, scribeTag);
     });
 
-    socket.on('next-round', (data) => {
-      this.gameState = data;
+    socket.on('nextRound', (data) => {
+      this.gameState = { ...this.gameState, ...data };
       this.updateGameUI();
+      this.displayStoryContent();
       this.showSubmitPhase();
     });
 
-    socket.on('game-complete', () => {
+    socket.on('gameComplete', () => {
       this.showGameComplete();
     });
   }
@@ -101,6 +104,35 @@ export class GamePage {
       `ROUND ${this.gameState.currentRound}/15`;
     document.querySelector('#scribe-name').textContent = 
       this.getPlayerName(this.gameState.scribeId);
+  }
+
+  displayStoryContent() {
+    const narrativeEl = document.querySelector('#narrative');
+    const promptEl = document.querySelector('#prompt');
+    
+    // Display origin story if it's the first round
+    if (this.gameState.currentRound === 1 && this.gameState.origin) {
+      narrativeEl.innerHTML = `
+        <div class="origin-story">
+          <h3>${this.gameState.origin.title}</h3>
+          <p>${this.gameState.origin.text}</p>
+        </div>
+      `;
+    } else {
+      // Display built narrative
+      narrativeEl.innerHTML = this.narrative.map((entry, index) => 
+        `<p><span class="round-marker">[Round ${index + 1}]</span> ${entry.sentence} <em>${entry.tag}</em></p>`
+      ).join('');
+    }
+    
+    // Display current prompt
+    if (this.gameState.prompt) {
+      promptEl.innerHTML = `
+        <div class="current-prompt">
+          <strong>Current Prompt:</strong> ${this.gameState.prompt.text}
+        </div>
+      `;
+    }
   }
 
   showSubmitPhase() {
@@ -150,10 +182,10 @@ export class GamePage {
       return;
     }
 
-    window.socket.emit('submit-sentence', {
+    window.socket.emit('submitSentence', {
       roomId: this.roomId,
-      playerId: this.user._id,
       sentence,
+      playerId: this.user._id,
       playerName: this.user.username
     });
 
@@ -210,7 +242,7 @@ export class GamePage {
       return;
     }
     
-    window.socket.emit('submit-vote', {
+    window.socket.emit('submitVote', {
       roomId: this.roomId,
       voterId: this.user._id,
       submissionId
@@ -260,7 +292,7 @@ export class GamePage {
       const tag = phaseContainer.querySelector('#scribe-tag').value;
       
       if (selected && window.socket) {
-        window.socket.emit('scribe-select', {
+        window.socket.emit('scribeChoice', {
           roomId: this.roomId,
           chosenId: selected.value,
           scribeTag: tag
@@ -278,13 +310,8 @@ export class GamePage {
   }
 
   addToNarrative(sentence, tag) {
-    const fullText = tag ? `${sentence} ${tag}` : sentence;
-    this.narrative.push(fullText);
-
-    const narrativeEl = document.querySelector('#narrative');
-    narrativeEl.innerHTML = this.narrative.map((text, idx) => `
-      <p class="narrative-line"><span class="line-num">${idx + 1}.</span> ${text}</p>
-    `).join('');
+    this.narrative.push({ sentence, tag });
+    this.displayStoryContent();
   }
 
   showGameComplete() {
