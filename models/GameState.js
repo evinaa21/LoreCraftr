@@ -9,6 +9,11 @@ class GameState {
     this.scribeId = null;
     this.topVoted = []; // Top 2 sentences by votes
     this.players = players;
+    // Persisted game metadata so late joiners can catch up
+    this.theme = null;
+    this.origin = null;   // { title, text }
+    this.prompt = null;   // { text, category }
+    this.narrative = [];  // [{ sentence, tag }]
     this.rotateScribe();
   }
 
@@ -82,6 +87,25 @@ class GameState {
 
   allVoted() {
     return this.votes.size === this.players.length - 1; // All except scribe
+  }
+
+  // Persist a finalized sentence for narrative
+  addNarrativeEntry(sentence, tag) {
+    this.narrative.push({ sentence, tag });
+  }
+
+  // Public state payload used for gameStarted and catch-up
+  getPublicState() {
+    return {
+      currentRound: this.currentRound,
+      phase: this.getPhase(),
+      scribeId: this.scribeId,
+      maxRounds: this.maxRounds,
+      theme: this.theme,
+      origin: this.origin,
+      prompt: this.prompt,
+      narrative: this.narrative
+    };
   }
 }
 

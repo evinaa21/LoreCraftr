@@ -243,6 +243,13 @@ io.on('connection', (socket) => {
 
       // Send room state to joiner
       socket.emit('roomState', { room });
+
+      // If a game is already active, send current game state to the joiner
+      const activeGame = gameStates.get(roomId);
+      if (activeGame) {
+        console.log(`  Sending active game state to ${socket.username} in room ${roomId}`);
+        socket.emit('gameStarted', activeGame.getPublicState());
+      }
     } catch (error) {
       console.error('Error joining room:', error);
       socket.emit('error', { message: 'Failed to join room' });
@@ -336,27 +343,19 @@ io.on('connection', (socket) => {
       console.log(`  ✓ Selected prompt: "${prompt.text}"`);
 
       const gameState = new GameState(roomId, players);
+      // Persist game metadata for late joiners
+      gameState.theme = room.theme;
+      gameState.origin = { title: origin.title, text: origin.text };
+      gameState.prompt = { text: prompt.text, category: prompt.category };
+      gameState.narrative = [];
+
       gameStates.set(roomId, gameState);
       
-      const gameData = {
-        currentRound: gameState.currentRound,
-        phase: gameState.getPhase(),
-        scribeId: gameState.scribeId,
-        maxRounds: gameState.maxRounds,
-        theme: room.theme,
-        origin: {
-          title: origin.title,
-          text: origin.text
-        },
-        prompt: {
-          text: prompt.text,
-          category: prompt.category
-        },
-        narrative: []
-      };
+      const gameData = gameState.getPublicState();
 
       console.log(`📡 Emitting gameStarted to room ${roomId}...`);
       console.log(`  Sockets in room:`, Array.from(io.sockets.adapter.rooms.get(roomId) || []));
+      console.log(`  Game data:`, JSON.stringify(gameData, null, 2));
 
       // Emit to ALL clients in the room
       io.to(roomId).emit('gameStarted', gameData);
@@ -439,17 +438,20 @@ io.on('connection', (socket) => {
     }
 
     if (socket.userId !== gameState.scribeId) {
-      socket.emit('error', { message: 'Only scribe can finalize' });
+      socket.emit('error', { message: 'Only the scribe can finalize the round' });
       return;
     }
 
     const chosen = gameState.submissions.get(chosenId);
     if (!chosen) {
-      socket.emit('error', { message: 'Invalid choice' });
+      socket.emit('error', { message: 'Chosen submission not found' });
       return;
     }
 
     const voteTally = gameState.topVoted;
+
+    // Persist into narrative so late joiners can catch up
+    gameState.addNarrativeEntry(chosen.sentence, scribeTag);
 
     io.to(roomId).emit('roundComplete', {
       chosenSentence: chosen.sentence,
@@ -465,35 +467,12 @@ io.on('connection', (socket) => {
     if (gameState.isComplete()) {
       io.to(roomId).emit('gameComplete');
       gameStates.delete(roomId);
-      console.log(`✓ Game ${roomId} completed`);
     } else {
-      try {
-        const room = await Room.findById(roomId).lean();
-        if (!room) {
-          throw new Error('Room not found');
-        }
-
-        const newPrompt = await Promise.race([
-          getCachedPrompt(room.theme, gameState.getPhase()),
-          new Promise((_, reject) => 
-            setTimeout(() => reject(new Error('Prompt fetch timeout')), 3000)
-          )
-        ]);
-
-        io.to(roomId).emit('nextRound', {
-          currentRound: gameState.currentRound,
-          phase: gameState.getPhase(),
-          scribeId: gameState.scribeId,
-          prompt: newPrompt ? { text: newPrompt.text, category: newPrompt.category } : null
-        });
-        
-        console.log(`✓ Round ${gameState.currentRound} started in ${roomId}`);
-      } catch (error) {
-        console.error('❌ Error advancing round:', error.message);
-        io.to(roomId).emit('error', { 
-          message: 'Error advancing to next round' 
-        });
-      }
+      io.to(roomId).emit('nextRound', {
+        currentRound: gameState.currentRound,
+        phase: gameState.getPhase(),
+        scribeId: gameState.scribeId
+      });
     }
   });
 
