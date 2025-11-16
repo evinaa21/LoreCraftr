@@ -148,8 +148,18 @@ export class LoginPage {
         }
 
         console.log('Auth successful, navigating to dashboard');
+        
+        // Update app with new user
+        const user = JSON.parse(localStorage.getItem('user'));
+        if (window.app) {
+          window.app.currentUser = user;
+          window.app.initSocket();
+        }
+        if (window.router) {
+          window.router.updateUser(user);
+        }
+        
         router.navigate('/dashboard');
-        window.location.reload(); // Force reload to initialize socket
       } catch (error) {
         console.error('Auth error:', error);
         errorMessage.textContent = error.message;

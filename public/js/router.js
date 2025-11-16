@@ -23,6 +23,11 @@ class Router {
     // Handle initial route
     this.handleRoute();
   }
+  
+  updateUser(user) {
+    this.currentUser = user;
+    this.handleRoute();
+  }
 
   async handleRoute() {
     const path = window.location.pathname;

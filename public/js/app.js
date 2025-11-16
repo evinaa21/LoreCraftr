@@ -34,6 +34,9 @@ class LoreCraftr {
     
     // Add particle control to settings (optional)
     this.addParticleControls();
+    
+    // Make router globally accessible for updates
+    window.router = router;
   }
 
   addParticleControls() {
