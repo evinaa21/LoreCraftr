@@ -151,6 +151,8 @@ export class LobbyPage {
       return;
     }
 
+    // Join room immediately
+    console.log('📍 Joining room:', this.roomId);
     this.socket.emit('joinRoom', { roomId: this.roomId });
 
     this.socket.on('playerJoined', () => {
@@ -166,7 +168,9 @@ export class LobbyPage {
       this.updateUI(document.querySelector('.lobby-container').parentElement);
     });
 
-    this.socket.on('gameStarted', () => {
+    // IMPORTANT: Navigate to game page when game starts
+    this.socket.on('gameStarted', (data) => {
+      console.log('✅ gameStarted received in lobby, navigating to game...');
       router.navigate(`/game/${this.roomId}`);
     });
   }
@@ -225,6 +229,7 @@ export class LobbyPage {
       console.log('  Socket connected:', !!this.socket);
       console.log('  Socket ID:', this.socket?.id);
       
+      // First, update room status
       const response = await fetch(`${API_URL}/rooms/start/${this.roomId}`, {
         method: 'POST',
         headers: {
@@ -239,7 +244,14 @@ export class LobbyPage {
 
       console.log('✅ Room status updated to IN_PROGRESS');
 
-      if (this.socket) {
+      if this.socket) {
+        // Ensure we're in the room before emitting
+        console.log('📡 Re-joining room before starting game...');
+        this.socket.emit('joinRoom', { roomId: this.roomId });
+        
+        // Small delay to ensure room join completes
+        await new Promise(resolve => setTimeout(resolve, 100));
+        
         console.log('📡 Emitting startGame event...');
         this.socket.emit('startGame', {
           roomId: this.roomId,

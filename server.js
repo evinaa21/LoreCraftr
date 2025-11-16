@@ -294,9 +294,15 @@ io.on('connection', (socket) => {
   // Start game
   socket.on('startGame', async ({ roomId, players }) => {
     try {
-      console.log(`🎮 Starting game in room ${roomId}...`);
+      console.log(`\n🎮 ========== GAME START REQUEST ==========`);
+      console.log(`  Room ID: ${roomId}`);
       console.log(`  Socket ID: ${socket.id}`);
       console.log(`  User: ${socket.username}`);
+      console.log(`  Players count: ${players.length}`);
+      console.log(`  Socket rooms: ${Array.from(socket.rooms).join(', ')}`);
+      console.log(`  Room has sockets: ${roomSockets.has(roomId)}`);
+      console.log(`  Room socket count: ${roomSockets.get(roomId)?.size || 0}`);
+      console.log(`==========================================\n`);
       
       const room = await Room.findById(roomId).lean();
       if (!room) {
@@ -350,19 +356,12 @@ io.on('connection', (socket) => {
       };
 
       console.log(`📡 Emitting gameStarted to room ${roomId}...`);
-      console.log(`  Data:`, JSON.stringify({
-        round: gameData.currentRound,
-        phase: gameData.phase,
-        scribeId: gameData.scribeId,
-        hasOrigin: !!gameData.origin,
-        hasPrompt: !!gameData.prompt,
-        theme: gameData.theme
-      }));
+      console.log(`  Sockets in room:`, Array.from(io.sockets.adapter.rooms.get(roomId) || []));
 
-      // THIS IS THE CRITICAL LINE - Make sure it's actually executing
+      // Emit to ALL clients in the room
       io.to(roomId).emit('gameStarted', gameData);
       
-      console.log(`✅ gameStarted emitted to ${roomSockets.get(roomId)?.size || 0} sockets in room ${roomId}`);
+      console.log(`✅ gameStarted emitted successfully\n`);
       
     } catch (error) {
       console.error('❌ Error starting game:', error.message);
