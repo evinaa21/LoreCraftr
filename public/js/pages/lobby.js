@@ -244,7 +244,7 @@ export class LobbyPage {
 
       console.log('✅ Room status updated to IN_PROGRESS');
 
-      if this.socket) {
+      if (this.socket) {
         // Ensure we're in the room before emitting
         console.log('📡 Re-joining room before starting game...');
         this.socket.emit('joinRoom', { roomId: this.roomId });
