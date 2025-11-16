@@ -7,6 +7,7 @@ export class GamePage {
     this.user = auth.getUser();
     this.gameState = null;
     this.narrative = [];
+    this.container = null;
   }
 
   render() {
@@ -30,7 +31,9 @@ export class GamePage {
         </div>
 
         <div class="game-phase" id="game-phase">
-          <!-- Dynamic phase content -->
+          <div class="waiting-state">
+            <p>Waiting for game to start...</p>
+          </div>
         </div>
 
         <div class="players-sidebar">
@@ -40,7 +43,12 @@ export class GamePage {
       </div>
     `;
 
+    // Store container reference
+    this.container = container;
+    
+    // Setup socket listeners AFTER container is created
     this.setupSocketListeners();
+    
     return container;
   }
 
@@ -67,9 +75,15 @@ export class GamePage {
       
       this.gameState = data;
       this.narrative = data.narrative || [];
-      this.updateGameUI();
-      this.displayStoryContent();
-      this.showSubmitPhase();
+      
+      // Ensure DOM is ready before updating
+      if (this.container) {
+        this.updateGameUI();
+        this.displayStoryContent();
+        this.showSubmitPhase();
+      } else {
+        console.error('Container not ready when gameStarted received');
+      }
     });
 
     socket.on('submissionReceived', ({ totalSubmissions, requiredSubmissions }) => {
@@ -98,9 +112,11 @@ export class GamePage {
 
     socket.on('nextRound', (data) => {
       this.gameState = { ...this.gameState, ...data };
-      this.updateGameUI();
-      this.displayStoryContent();
-      this.showSubmitPhase();
+      if (this.container) {
+        this.updateGameUI();
+        this.displayStoryContent();
+        this.showSubmitPhase();
+      }
     });
 
     socket.on('gameComplete', () => {
@@ -109,16 +125,35 @@ export class GamePage {
   }
 
   updateGameUI() {
-    document.querySelector('#phase-display').textContent = this.gameState.phase;
-    document.querySelector('#round-display').textContent = 
-      `ROUND ${this.gameState.currentRound}/15`;
-    document.querySelector('#scribe-name').textContent = 
-      this.getPlayerName(this.gameState.scribeId);
+    if (!this.container || !this.gameState) {
+      console.warn('updateGameUI called but container or gameState not ready');
+      return;
+    }
+
+    const phaseDisplay = this.container.querySelector('#phase-display');
+    const roundDisplay = this.container.querySelector('#round-display');
+    const scribeName = this.container.querySelector('#scribe-name');
+    
+    if (!phaseDisplay || !roundDisplay || !scribeName) {
+      console.error('Game UI elements not found in DOM');
+      return;
+    }
+
+    phaseDisplay.textContent = this.gameState.phase;
+    roundDisplay.textContent = `ROUND ${this.gameState.currentRound}/15`;
+    scribeName.textContent = this.getPlayerName(this.gameState.scribeId);
   }
 
   displayStoryContent() {
-    const narrativeEl = document.querySelector('#narrative');
-    const promptEl = document.querySelector('#prompt');
+    if (!this.container || !this.gameState) return;
+
+    const narrativeEl = this.container.querySelector('#narrative');
+    const promptEl = this.container.querySelector('#prompt');
+    
+    if (!narrativeEl || !promptEl) {
+      console.error('Story content elements not found');
+      return;
+    }
     
     // Display origin story if it's the first round
     if (this.gameState.currentRound === 1 && this.gameState.origin) {
@@ -142,12 +177,18 @@ export class GamePage {
           <strong>Current Prompt:</strong> ${this.gameState.prompt.text}
         </div>
       `;
+    } else {
+      promptEl.textContent = 'Loading prompt...';
     }
   }
 
   showSubmitPhase() {
+    if (!this.container || !this.gameState) return;
+
     const isScribe = this.gameState.scribeId === this.user._id;
-    const phaseContainer = document.querySelector('#game-phase');
+    const phaseContainer = this.container.querySelector('#game-phase');
+    
+    if (!phaseContainer) return;
 
     if (isScribe) {
       phaseContainer.innerHTML = `
@@ -174,13 +215,18 @@ export class GamePage {
       const textarea = phaseContainer.querySelector('#sentence-input');
       const charCount = phaseContainer.querySelector('#char-count');
       
-      textarea.addEventListener('input', () => {
-        charCount.textContent = textarea.value.length;
-      });
+      if (textarea && charCount) {
+        textarea.addEventListener('input', () => {
+          charCount.textContent = textarea.value.length;
+        });
+      }
 
-      phaseContainer.querySelector('#submit-sentence-btn').addEventListener('click', () => {
-        this.submitSentence(textarea.value);
-      });
+      const submitBtn = phaseContainer.querySelector('#submit-sentence-btn');
+      if (submitBtn && textarea) {
+        submitBtn.addEventListener('click', () => {
+          this.submitSentence(textarea.value);
+        });
+      }
     }
   }
 
@@ -199,25 +245,35 @@ export class GamePage {
       playerName: this.user.username
     });
 
-    document.querySelector('#game-phase').innerHTML = `
-      <div class="waiting-state">
-        <p>Sentence submitted</p>
-        <p>Waiting for other players...</p>
-      </div>
-    `;
+    const phaseContainer = this.container?.querySelector('#game-phase');
+    if (phaseContainer) {
+      phaseContainer.innerHTML = `
+        <div class="waiting-state">
+          <p>Sentence submitted</p>
+          <p>Waiting for other players...</p>
+        </div>
+      `;
+    }
   }
 
   showVotingPhase(submissions) {
+    if (!this.container || !this.gameState) return;
+
     if (this.gameState.scribeId === this.user._id) {
-      document.querySelector('#game-phase').innerHTML = `
-        <div class="scribe-wait">
-          <p>Players are voting on submissions...</p>
-        </div>
-      `;
+      const phaseContainer = this.container.querySelector('#game-phase');
+      if (phaseContainer) {
+        phaseContainer.innerHTML = `
+          <div class="scribe-wait">
+            <p>Players are voting on submissions...</p>
+          </div>
+        `;
+      }
       return;
     }
 
-    const phaseContainer = document.querySelector('#game-phase');
+    const phaseContainer = this.container.querySelector('#game-phase');
+    if (!phaseContainer) return;
+
     phaseContainer.innerHTML = `
       <div class="voting-phase">
         <h3>VOTE FOR THE BEST FIT</h3>
@@ -238,12 +294,15 @@ export class GamePage {
       </div>
     `;
 
-    phaseContainer.querySelector('#submit-vote-btn').addEventListener('click', () => {
-      const selected = phaseContainer.querySelector('input[name="vote"]:checked');
-      if (selected) {
-        this.submitVote(selected.value);
-      }
-    });
+    const submitVoteBtn = phaseContainer.querySelector('#submit-vote-btn');
+    if (submitVoteBtn) {
+      submitVoteBtn.addEventListener('click', () => {
+        const selected = phaseContainer.querySelector('input[name="vote"]:checked');
+        if (selected) {
+          this.submitVote(selected.value);
+        }
+      });
+    }
   }
 
   submitVote(submissionId) {
@@ -258,16 +317,23 @@ export class GamePage {
       submissionId
     });
 
-    document.querySelector('#game-phase').innerHTML = `
-      <div class="waiting-state">
-        <p>Vote submitted</p>
-        <p>Waiting for other players...</p>
-      </div>
-    `;
+    const phaseContainer = this.container?.querySelector('#game-phase');
+    if (phaseContainer) {
+      phaseContainer.innerHTML = `
+        <div class="waiting-state">
+          <p>Vote submitted</p>
+          <p>Waiting for other players...</p>
+        </div>
+      `;
+    }
   }
 
   showScribeChoice(topVoted) {
-    const phaseContainer = document.querySelector('#game-phase');
+    if (!this.container) return;
+
+    const phaseContainer = this.container.querySelector('#game-phase');
+    if (!phaseContainer) return;
+
     phaseContainer.innerHTML = `
       <div class="scribe-choice">
         <h3>CHOOSE THE FINAL SENTENCE</h3>
@@ -297,26 +363,34 @@ export class GamePage {
       </div>
     `;
 
-    phaseContainer.querySelector('#submit-choice-btn').addEventListener('click', () => {
-      const selected = phaseContainer.querySelector('input[name="scribe-choice"]:checked');
-      const tag = phaseContainer.querySelector('#scribe-tag').value;
-      
-      if (selected && window.socket) {
-        window.socket.emit('scribeChoice', {
-          roomId: this.roomId,
-          chosenId: selected.value,
-          scribeTag: tag
-        });
-      }
-    });
+    const submitChoiceBtn = phaseContainer.querySelector('#submit-choice-btn');
+    if (submitChoiceBtn) {
+      submitChoiceBtn.addEventListener('click', () => {
+        const selected = phaseContainer.querySelector('input[name="scribe-choice"]:checked');
+        const tagInput = phaseContainer.querySelector('#scribe-tag');
+        
+        if (selected && window.socket && tagInput) {
+          window.socket.emit('scribeChoice', {
+            roomId: this.roomId,
+            chosenId: selected.value,
+            scribeTag: tagInput.value
+          });
+        }
+      });
+    }
   }
 
   showWaitingForScribe() {
-    document.querySelector('#game-phase').innerHTML = `
-      <div class="waiting-state">
-        <p>Waiting for Scribe to choose...</p>
-      </div>
-    `;
+    if (!this.container) return;
+
+    const phaseContainer = this.container.querySelector('#game-phase');
+    if (phaseContainer) {
+      phaseContainer.innerHTML = `
+        <div class="waiting-state">
+          <p>Waiting for Scribe to choose...</p>
+        </div>
+      `;
+    }
   }
 
   addToNarrative(sentence, tag) {
@@ -325,17 +399,25 @@ export class GamePage {
   }
 
   showGameComplete() {
-    document.querySelector('#game-phase').innerHTML = `
-      <div class="game-complete">
-        <h2>STORY COMPLETE</h2>
-        <p>The tale has been told.</p>
-        <button id="return-btn" class="btn-primary">RETURN TO LOBBY</button>
-      </div>
-    `;
+    if (!this.container) return;
 
-    document.querySelector('#return-btn').addEventListener('click', () => {
-      router.navigate('/dashboard');
-    });
+    const phaseContainer = this.container.querySelector('#game-phase');
+    if (phaseContainer) {
+      phaseContainer.innerHTML = `
+        <div class="game-complete">
+          <h2>STORY COMPLETE</h2>
+          <p>The tale has been told.</p>
+          <button id="return-btn" class="btn-primary">RETURN TO LOBBY</button>
+        </div>
+      `;
+
+      const returnBtn = phaseContainer.querySelector('#return-btn');
+      if (returnBtn) {
+        returnBtn.addEventListener('click', () => {
+          router.navigate('/dashboard');
+        });
+      }
+    }
   }
 
   getPlayerName(playerId) {
