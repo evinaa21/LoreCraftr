@@ -48,13 +48,23 @@ export class GamePage {
     const socket = window.socket;
     
     if (!socket) {
-      console.error('Socket not initialized');
+      console.error('❌ Socket not initialized');
       alert('Connection error. Please refresh the page.');
       router.navigate('/dashboard');
       return;
     }
 
+    console.log('🎮 Setting up game socket listeners for room:', this.roomId);
+
     socket.on('gameStarted', (data) => {
+      console.log('✅ gameStarted event received:', { 
+        round: data.currentRound, 
+        phase: data.phase,
+        hasOrigin: !!data.origin,
+        hasPrompt: !!data.prompt,
+        theme: data.theme
+      });
+      
       this.gameState = data;
       this.narrative = data.narrative || [];
       this.updateGameUI();

@@ -64,16 +64,21 @@ class LoreCraftr {
     window.socket = this.socket;
 
     this.socket.on('connect', () => {
-      console.log('✓ Connected to server');
+      console.log('✓ Connected to server', { socketId: this.socket.id });
     });
 
-    this.socket.on('disconnect', () => {
-      console.log('✗ Disconnected from server');
+    this.socket.on('disconnect', (reason) => {
+      console.log('✗ Disconnected from server', { reason });
+    });
+    
+    this.socket.on('connect_error', (error) => {
+      console.error('❌ Connection error:', error.message);
+      this.showNotification('Connection error: ' + error.message, 'error');
     });
 
     this.socket.on('error', (error) => {
-      console.error('Socket error:', error);
-      this.showNotification(error.message, 'error');
+      console.error('❌ Socket error:', error);
+      this.showNotification(error.message || error, 'error');
     });
   }
 
