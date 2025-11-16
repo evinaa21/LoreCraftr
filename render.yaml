@@ -13,4 +13,6 @@ services:
       - key: JWT_SECRET
         generateValue: true
       - key: CLIENT_URL
-        sync: false
+        value: https://lorecraftr.onrender.com
+      - key: PORT
+        value: 10000

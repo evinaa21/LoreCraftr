@@ -29,6 +29,7 @@ export class GamePage {
           <div class="scribe-indicator" id="scribe-indicator">
             SCRIBE: <span id="scribe-name">---</span>
           </div>
+          <button class="btn-ghost leave-game-btn" id="leave-game-btn">LEAVE GAME</button>
         </div>
 
         <div class="story-block" id="story-block">
@@ -52,6 +53,9 @@ export class GamePage {
     // Store container reference
     this.container = container;
     
+    // Attach event listeners
+    this.attachEventListeners();
+    
     // Join the socket room
     this.joinRoom();
     
@@ -59,6 +63,11 @@ export class GamePage {
     this.setupSocketListeners();
     
     return container;
+  }
+
+  attachEventListeners() {
+    const leaveBtn = this.container.querySelector('#leave-game-btn');
+    leaveBtn.addEventListener('click', () => this.leaveGame());
   }
 
   joinRoom() {
@@ -487,6 +496,28 @@ export class GamePage {
     if (timerContainer) {
       timerContainer.style.display = 'none';
       timerContainer.classList.remove('warning', 'critical');
+    }
+  }
+
+  async leaveGame() {
+    if (!confirm('Are you sure you want to leave this game? Your progress will be lost.')) {
+      return;
+    }
+
+    try {
+      const socket = window.socket;
+      
+      // Notify server via socket
+      socket.emit('leaveRoom', { roomId: this.roomId });
+      
+      // Clean up
+      this.stopTimer();
+      
+      // Navigate back to dashboard
+      window.router.navigate('/dashboard');
+    } catch (error) {
+      console.error('Error leaving game:', error);
+      alert('Failed to leave game. Please try again.');
     }
   }
 
