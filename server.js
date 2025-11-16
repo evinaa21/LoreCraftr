@@ -222,6 +222,8 @@ io.on('connection', (socket) => {
   socket.on('startGame', async ({ roomId, players }) => {
     try {
       console.log(`🎮 Starting game in room ${roomId}...`);
+      console.log(`  Socket ID: ${socket.id}`);
+      console.log(`  User: ${socket.username}`);
       
       // Get room to fetch theme
       const room = await Room.findById(roomId);
@@ -240,7 +242,7 @@ io.on('connection', (socket) => {
       
       if (originCount === 0) {
         console.error(`❌ No origins found for theme: ${room.theme}`);
-        socket.emit('error', { message: 'No story origins available for this theme' });
+        socket.emit('error', { message: `No story origins available for ${room.theme}. Please run: npm run seed` });
         return;
       }
       
@@ -254,7 +256,7 @@ io.on('connection', (socket) => {
       
       if (promptCount === 0) {
         console.error(`❌ No SETTING prompts found for theme: ${room.theme}`);
-        socket.emit('error', { message: 'No prompts available for this theme' });
+        socket.emit('error', { message: `No prompts available for ${room.theme}. Please run: npm run seed` });
         return;
       }
       
@@ -262,9 +264,11 @@ io.on('connection', (socket) => {
       const prompt = await Prompt.findOne({ theme: room.theme, category: 'SETTING' }).skip(randomPrompt);
       console.log(`  ✓ Selected prompt: "${prompt.text}"`);
 
+      // Create game state
       const gameState = new GameState(roomId, players);
       gameStates.set(roomId, gameState);
       console.log(`  ✓ Game state created`);
+      console.log(`  ✓ Scribe ID: ${gameState.scribeId}`);
 
       const gameData = {
         currentRound: gameState.currentRound,
@@ -272,22 +276,34 @@ io.on('connection', (socket) => {
         scribeId: gameState.scribeId,
         maxRounds: gameState.maxRounds,
         theme: room.theme,
-        origin: origin,
-        prompt: prompt,
+        origin: {
+          title: origin.title,
+          text: origin.text
+        },
+        prompt: {
+          text: prompt.text,
+          category: prompt.category
+        },
         narrative: []
       };
 
-      io.to(roomId).emit('gameStarted', gameData);
-      console.log(`✓ Game started - emitted gameStarted to room ${roomId}`);
-      console.log(`  Data:`, { 
-        round: gameData.currentRound, 
-        phase: gameData.phase, 
+      console.log(`📡 Emitting gameStarted to room ${roomId}...`);
+      console.log(`  Data:`, {
+        round: gameData.currentRound,
+        phase: gameData.phase,
         scribeId: gameData.scribeId,
         hasOrigin: !!gameData.origin,
         hasPrompt: !!gameData.prompt
       });
+
+      // Emit to ALL clients in the room (including sender)
+      io.to(roomId).emit('gameStarted', gameData);
+      
+      console.log(`✅ gameStarted emitted successfully to room ${roomId}`);
+      
     } catch (error) {
       console.error('❌ Error starting game:', error);
+      console.error('Stack trace:', error.stack);
       socket.emit('error', { message: 'Failed to start game: ' + error.message });
     }
   });

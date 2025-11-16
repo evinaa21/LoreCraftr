@@ -220,6 +220,11 @@ export class LobbyPage {
 
   async startGame() {
     try {
+      console.log('🎮 Starting game from lobby...');
+      console.log('  Room ID:', this.roomId);
+      console.log('  Socket connected:', !!this.socket);
+      console.log('  Socket ID:', this.socket?.id);
+      
       const response = await fetch(`${API_URL}/rooms/start/${this.roomId}`, {
         method: 'POST',
         headers: {
@@ -232,14 +237,21 @@ export class LobbyPage {
         throw new Error(error.error || 'Failed to start game');
       }
 
+      console.log('✅ Room status updated to IN_PROGRESS');
+
       if (this.socket) {
+        console.log('📡 Emitting startGame event...');
         this.socket.emit('startGame', {
           roomId: this.roomId,
           players: this.room.players.map(p => ({ id: p._id, name: p.username }))
         });
+        console.log('✅ startGame event emitted');
+      } else {
+        console.error('❌ Socket not available!');
+        throw new Error('Connection lost. Please refresh the page.');
       }
     } catch (error) {
-      console.error('Error starting game:', error);
+      console.error('❌ Error starting game:', error);
       alert(error.message);
     }
   }
